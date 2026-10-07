@@ -1,0 +1,25 @@
+{
+  "name": "rmz-google-sheets",
+  "version": "0.2.0",
+  "description": "A command-line tool for reading and editing Google Sheets",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "rmz-sheets": "dist/src/cli.js"
+  },
+  "scripts": {
+    "build": "node ./node_modules/typescript/bin/tsc",
+    "test": "npm run build && node --test dist/tests/*.test.js"
+  },
+  "dependencies": {
+    "google-auth-library": "^11.1.0",
+    "googleapis": "^183.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

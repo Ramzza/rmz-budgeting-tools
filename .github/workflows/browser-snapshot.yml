@@ -1,0 +1,35 @@
+name: Optional browser homepage snapshot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/google-sheets/package-lock.json
+            packages/market-data/package-lock.json
+            packages/revolut-spending/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install package dependencies
+        run: npm run install:packages
+
+      - name: Install Chromium
+        run: node packages/revolut-spending/node_modules/playwright/cli.js install --with-deps chromium
+
+      - name: Test public homepage snapshot
+        run: npm run test:browser-snapshot

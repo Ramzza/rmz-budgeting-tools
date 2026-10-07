@@ -1,0 +1,25 @@
+{
+  "name": "rmz-budgeting-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A TypeScript monorepo for spending, market data, and Google Sheets budgeting tools",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "install:packages": "npm ci --prefix packages/google-sheets && npm ci --prefix packages/market-data && npm ci --prefix packages/revolut-spending",
+    "build": "npm run build --prefix packages/google-sheets && npm run build --prefix packages/market-data && npm run build --prefix packages/revolut-spending",
+    "test:packages": "npm test --prefix packages/google-sheets && npm test --prefix packages/market-data && npm test --prefix packages/revolut-spending",
+    "test:requirements": "node --import tsx --test tests/*.test.ts",
+    "test": "npm run test:packages && npm run test:requirements",
+    "start:sheets": "node packages/google-sheets/dist/src/cli.js",
+    "start:market-data": "node packages/market-data/dist/cli.js",
+    "start:revolut-spending": "node packages/revolut-spending/dist/cli.js",
+    "test:browser-snapshot": "npm run test:browser-snapshot --prefix packages/revolut-spending"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0"
+  }
+}

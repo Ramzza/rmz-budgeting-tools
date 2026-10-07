@@ -1,0 +1,27 @@
+{
+  "name": "rmz-revolut-spending",
+  "version": "0.1.0",
+  "description": "Read and summarize spending from exported Revolut account statements",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "rmz-revolut-spending": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.json && chmod +x dist/cli.js",
+    "start": "node dist/cli.js",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:browser-snapshot": "node node_modules/@playwright/test/cli.js test tests/browser-snapshot.spec.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "playwright": "^1.63.0"
+  }
+}
