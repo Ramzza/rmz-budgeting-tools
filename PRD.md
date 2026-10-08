@@ -16,6 +16,8 @@ data mapping, schedule, and credential flow are specified.
   - Optional manual API smoke test:
     `packages/google-sheets/tests/connection.integration.ts`, invoked with
     `npm run test:connection --prefix packages/google-sheets`.
+  - `packages/google-sheets/tests/connection-config.test.ts` verifies that the
+    manual command loads the package-local `.env` file.
 - **SHEETS-002 - Validate and write cell values:** Accept only non-empty matrices of non-empty rows with scalar cells. Updates use `USER_ENTERED`; appends use `USER_ENTERED` with `INSERT_ROWS`.
   **Verification:**
   - `packages/google-sheets/tests/cli.test.ts` tests tagged `PRD-002`.

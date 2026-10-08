@@ -90,15 +90,21 @@ npm test --prefix packages/google-sheets
 ```
 
 To manually verify access to a Google Sheet, configure Application Default
-Credentials and share the test sheet with the authenticated account. Then read
-one populated cell:
+Credentials and share the test sheet with the authenticated account. Create
+`packages/google-sheets/.env` with a spreadsheet ID and one populated cell:
+
+```dotenv
+GOOGLE_SHEETS_TEST_SPREADSHEET_ID=YOUR_SPREADSHEET_ID
+GOOGLE_SHEETS_TEST_RANGE=Budget!A1
+```
+
+Then run:
 
 ```sh
-GOOGLE_SHEETS_TEST_SPREADSHEET_ID="YOUR_SPREADSHEET_ID" \
-GOOGLE_SHEETS_TEST_RANGE="Budget!A1" \
 npm run test:connection --prefix packages/google-sheets
 ```
 
-The connection test is separate from `npm test`; it requires a spreadsheet ID,
-a single-cell A1 range, and credentials with access to that spreadsheet. It
-does not print or save the cell contents.
+The command automatically loads the package-local `.env` with Node's
+`--env-file` option. The file is git-ignored. The test requires a single-cell
+A1 range and credentials with access to the spreadsheet; it does not print or
+save the cell contents.
