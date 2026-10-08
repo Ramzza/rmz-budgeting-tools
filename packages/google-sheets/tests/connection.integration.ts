@@ -20,8 +20,5 @@ test("SHEETS-001: reads one populated Google Sheets cell using ADC", async () =>
 
   assert.equal(values.length, 1, "The configured range must return one populated cell.");
   assert.equal(values[0]?.length, 1, "The configured range must be a single-cell range.");
-  assert.ok(
-    values[0]?.[0] !== undefined && values[0][0] !== null && values[0][0] !== "",
-    "The configured cell must contain a value.",
-  );
+  assert.equal(values[0]?.[0], 300, "The configured cell must contain 300.");
 });
