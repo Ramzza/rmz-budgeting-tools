@@ -36,23 +36,30 @@ gcloud --version
 ```
 
 1. Enable the Google Sheets API in your Google Cloud project.
-2. Configure Application Default Credentials. For a service account, set
-   `GOOGLE_APPLICATION_CREDENTIALS` to its JSON key file and share the target
-   spreadsheet with the service account's email address. For a Google user
-   account, the Google Cloud CLI's default ADC scopes do not include Google
-   Sheets. Create a Desktop app OAuth client ID for your project using
-   [Google's credential guide](https://developers.google.com/workspace/guides/create-credentials),
-   and download its JSON file outside this repository. Then run the following,
-   replacing the placeholders with the OAuth client JSON path and project ID:
+2. Configure Application Default Credentials:
 
-   ```sh
-   gcloud auth application-default login --client-id-file="PATH_TO_OAUTH_CLIENT_JSON" --scopes="openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets"
-   gcloud auth application-default set-quota-project PROJECT_ID
-   ```
+   - **Service account:** Set `GOOGLE_APPLICATION_CREDENTIALS` to its JSON key
+     file and share the target spreadsheet with the service account's email
+     address.
+   - **Google user account:** In Google Cloud Console, create or select a
+     project and open **Google Auth Platform** for it. Add
+     `https://www.googleapis.com/auth/spreadsheets` under **Data Access**, and
+     add your Google account under **Audience** as a test user. Under
+     **Clients**, create a **Desktop app** OAuth client and download its client
+     secret JSON file (for example, `secret.json`). Keep this file outside the
+     repository.
 
-   The account must have `serviceusage.services.use` permission on the quota
-   project. A warning about the unrelated `sqlservice.login` scope does not
-   prevent Sheets access.
+     Run the following in the same environment where you will run `rmz-sheets`,
+     replacing the placeholder with the path to the downloaded JSON file:
+
+     ```sh
+     gcloud auth application-default login \
+       --scopes="https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets" \
+       --client-id-file=PATH-TO-EXPORTED-CLIENT-SECRET-JSON
+     ```
+
+     When the browser opens, sign in as the test user and grant access. The
+     authenticated account must also have access to the target spreadsheet.
 3. From the repository root, install dependencies and build the CLI:
 
    ```sh
