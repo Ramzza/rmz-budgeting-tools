@@ -13,6 +13,9 @@ data mapping, schedule, and credential flow are specified.
 - **SHEETS-001 - Read spreadsheet ranges:** Read the requested spreadsheet ID and A1 range and return its cell matrix, using an empty matrix when the API has no values.
   **Verification:**
   - `packages/google-sheets/tests/sheets.test.ts` tests tagged `PRD-001`.
+  - Optional manual API smoke test:
+    `packages/google-sheets/tests/connection.integration.ts`, invoked with
+    `npm run test:connection --prefix packages/google-sheets`.
 - **SHEETS-002 - Validate and write cell values:** Accept only non-empty matrices of non-empty rows with scalar cells. Updates use `USER_ENTERED`; appends use `USER_ENTERED` with `INSERT_ROWS`.
   **Verification:**
   - `packages/google-sheets/tests/cli.test.ts` tests tagged `PRD-002`.

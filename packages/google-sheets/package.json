@@ -9,7 +9,8 @@
   },
   "scripts": {
     "build": "node ./node_modules/typescript/bin/tsc",
-    "test": "npm run build && node --test dist/tests/*.test.js"
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "test:connection": "npm run build && node --test dist/tests/connection.integration.js"
   },
   "dependencies": {
     "google-auth-library": "^11.1.0",

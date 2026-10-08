@@ -88,3 +88,17 @@ Run the unit tests with:
 ```sh
 npm test --prefix packages/google-sheets
 ```
+
+To manually verify access to a Google Sheet, configure Application Default
+Credentials and share the test sheet with the authenticated account. Then read
+one populated cell:
+
+```sh
+GOOGLE_SHEETS_TEST_SPREADSHEET_ID="YOUR_SPREADSHEET_ID" \
+GOOGLE_SHEETS_TEST_RANGE="Budget!A1" \
+npm run test:connection --prefix packages/google-sheets
+```
+
+The connection test is separate from `npm test`; it requires a spreadsheet ID,
+a single-cell A1 range, and credentials with access to that spreadsheet. It
+does not print or save the cell contents.
