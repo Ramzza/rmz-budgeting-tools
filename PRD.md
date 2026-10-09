@@ -55,6 +55,9 @@ data mapping, schedule, and credential flow are specified.
 - **SPEND-007 - Optional public homepage snapshot:** A separate headless Chromium test visits `https://revolut.com` before any Login interaction, waits for fonts and images, and compares the 1900 x 910 screenshot with `tests/resources/01-revolut-homepage.png`. Run it only from an explicitly triggered optional workflow, not standard push or pull-request checks. Network, site-load, and visual-diff failures fail that workflow; it never enters credentials or accesses account data.
   **Verification:**
   - `packages/revolut-spending/tests/browser-snapshot-config.test.ts` tests tagged `PRD-007`.
+- **SPEND-008 - Write category output to a file:** The `categories` command accepts `--output FILE` and writes the selected JSON or CSV output to that file instead of stdout. Without `--output`, preserve the existing stdout behavior. Reject missing output paths and use of the flag with other commands.
+  **Verification:**
+  - `packages/revolut-spending/tests/cli.test.ts` tests tagged `SPEND-008`.
 - **MONOREPO-001 - Unified TypeScript monorepo:** Provide root commands to install, build, and test each package reproducibly while keeping each package's dependencies and CLI independent. Keep the existing tools' distinct input/output behavior available; do not couple monthly scheduling or persistence into this consolidation.
   **Verification:**
   - `tests/monorepo.test.ts` tests tagged `MONOREPO-001`.

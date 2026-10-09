@@ -4,12 +4,12 @@
 
 ## Components and flow
 
-- `src/cli.ts` parses the command, date limits, requested Analytics month, and output format; it reads the selected CSV or HTML file and coordinates parsing and output.
+- `src/cli.ts` parses the command, date limits, requested Analytics month, output format, and optional category output path; it reads the selected CSV or HTML file and coordinates parsing and output.
 - `src/csv.ts` parses quoted CSV fields and serializes tabular results.
 - `src/revolut.ts` maps statement columns into typed transactions, selects completed negative-amount transactions within the inclusive date range, and aggregates totals independently by currency.
 - `src/spending-html.ts` extracts category labels and non-negative numeric RON amounts from the transaction-breakdown buttons in local Revolut spending HTML.
 - `src/browser-login.ts` is a concise orchestration entry point (at most 100 lines) that calls readable browser-step wrappers in `src/browser-login-flow.ts`. Those steps launch non-persistent visible Chromium at 1860 x 1000, wait for manual sign-in, select the requested Analytics month, and save only the category-button container. `src/browser-login-month.ts` parses month arguments and formats selector labels.
-- The CLI emits transaction rows, spending summaries, or category totals as JSON or CSV. Browser capture output is written locally to `output/spending-YYYY-MM.html`; it stores no database, cache, or authentication state.
+- The CLI emits transaction rows, spending summaries, or category totals as JSON or CSV. Category output goes to stdout by default and can be written to a user-selected local file. Browser capture output is written locally to `output/spending-YYYY-MM.html`; it stores no database, cache, or authentication state.
 
 Input CSV supports the statement's completed/started date, description, amount, currency, state, category, and type columns. The `categories` command reads local HTML files and omits transaction counts, percentages, and the displayed minus sign. Refunds and credits are not netted against outflows; CSV totals are grouped by currency.
 
