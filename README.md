@@ -45,6 +45,8 @@ npm run start:revolut-spending -- categories ./spending.html
 npm run start:revolut-spending -- browser-login last
 
 npm run start:sheets -- get SPREADSHEET_ID 'Sheet1!A1:C10'
+npm run start:sheets -- fill-spendings 2026-09 \
+  --spending-input ./spendings.json
 npm --silent run start:revolut-spending -- categories ./spending.html \
   | npm --silent run start:sheets -- fill-spendings 2026-09 --spending-input -
 ```
