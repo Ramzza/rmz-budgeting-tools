@@ -114,6 +114,11 @@ npm run start:sheets -- fill-spendings 2026-09 \
   --spending-input ./spendings.json --profile N --spreadsheet-id SPREADSHEET_ID
 ```
 
+In the pipeline, `--silent` suppresses npm's own banner and log output, not the
+CLI's output. It keeps npm output from the producer from being mixed into the
+category JSON that the Sheets CLI reads. On the final command, it just keeps
+npm's banner out of the terminal.
+
 If a category in the input does not exist in the selected sheet tab, the
 command reports an error instead of silently dropping the amount. When
 `--spreadsheet-id` is omitted, `GOOGLE_SHEETS_SPREADSHEET_ID` must be set in a
@@ -131,6 +136,25 @@ Run the unit tests with:
 ```sh
 npm test --prefix packages/google-sheets
 ```
+
+This runs the offline unit tests, including the `SHEETS-004` import tests in
+`tests/cli.test.ts`. They check spending input parsing and use a mock Sheets
+client to verify the import reads the category range and writes to the
+requested column. They do not need Google credentials or modify a real sheet.
+
+For a live end-to-end check, use a disposable spreadsheet with a `2026-09` tab
+and `Groceries` in `A43:A70`. Configure Google credentials with access to it,
+then run this from the repository root:
+
+```sh
+printf '[{"category":"Groceries","ron":25}]' \
+  | npm --silent run start:sheets -- fill-spendings 2026-09 \
+    --spending-input - --spreadsheet-id TEST_SPREADSHEET_ID
+```
+
+This performs a real update, not a dry run: profile Z (the default) writes
+`D43:D70`, while profile N writes `C43:C70`. Categories missing from the input
+are written as `0`, so use a disposable test tab.
 
 To manually verify access to a Google Sheet, configure Application Default
 Credentials and share the test sheet with the authenticated account. Create

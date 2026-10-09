@@ -49,6 +49,11 @@ npm --silent run start:revolut-spending -- categories ./spending.html \
   | npm --silent run start:sheets -- fill-spendings 2026-09 --spending-input -
 ```
 
+In this pipeline, `--silent` suppresses npm's own output so it does not get
+mixed into the category JSON sent to Sheets; it does not silence either CLI.
+See the [Google Sheets README](packages/google-sheets/README.md) for offline
+unit-test and live-import instructions.
+
 The browser capture is manual and opt-in; it does not read, store, or handle
 credentials. Keep account exports, saved spending HTML, spreadsheet contents,
 and credential files outside Git. Google credentials must be configured
