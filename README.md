@@ -1,14 +1,13 @@
 # rmz-budgeting-tools
 
 A TypeScript monorepo that brings together the existing Google Sheets,
-market-data, and Revolut spending tools for a future monthly budgeting workflow.
+market-data, and Revolut spending tools for a manual monthly budgeting workflow.
 See [PRD.md](PRD.md) for requirements and [ARCHITECTURE.md](ARCHITECTURE.md)
 for package boundaries.
 
-This consolidation keeps the three CLIs independently usable. It does not yet
-schedule a monthly run or automatically map the extracted values into a
-budgeting sheet; that workflow needs a confirmed sheet schema, data mapping,
-schedule, and credential flow.
+The three CLIs remain independently usable. Revolut category JSON can be piped
+into the Google Sheets CLI to fill monthly sheet tabs. Scheduled extraction
+and market-data imports are not included.
 
 ## Packages
 
@@ -46,12 +45,24 @@ npm run start:revolut-spending -- categories ./spending.html
 npm run start:revolut-spending -- browser-login last
 
 npm run start:sheets -- get SPREADSHEET_ID 'Sheet1!A1:C10'
+npm run start:sheets -- fill-spendings 2026-09 \
+  --spending-input ./spendings.json
+npm --silent run start:revolut-spending -- categories ./spending.html \
+  | npm --silent run start:sheets -- fill-spendings 2026-09 --spending-input -
 ```
+
+In this pipeline, `--silent` suppresses npm's own output so it does not get
+mixed into the category JSON sent to Sheets; it does not silence either CLI.
+See the [Google Sheets README](packages/google-sheets/README.md) for offline
+unit-test and live-import instructions.
 
 The browser capture is manual and opt-in; it does not read, store, or handle
 credentials. Keep account exports, saved spending HTML, spreadsheet contents,
 and credential files outside Git. Google credentials must be configured
 outside the repository.
+For monthly imports, `GOOGLE_SHEETS_SPREADSHEET_ID` must be set in `.env` or
+passed with `--spreadsheet-id`; profile Z fills column D by default, while
+profile N fills column C. See the package guides for details.
 
 ## Optional browser snapshot
 

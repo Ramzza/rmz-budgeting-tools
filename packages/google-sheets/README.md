@@ -70,12 +70,27 @@ gcloud --version
 
 ## Usage
 
-Pass the spreadsheet ID from its URL and a Sheets A1 range:
+Pass the spreadsheet ID from its URL and a Sheets A1 range. The ID remains an
+optional positional argument; if omitted, the CLI reads
+`GOOGLE_SHEETS_SPREADSHEET_ID` from a `.env` file in the current working
+directory, then prompts for it if the variable is unset:
 
 ```sh
 npm run start:sheets -- get SPREADSHEET_ID 'Sheet1!A1:C10'
 npm run start:sheets -- update SPREADSHEET_ID 'Sheet1!A1:B2' --values '[["Name", "Count"], ["Tea", 3]]'
 npm run start:sheets -- append SPREADSHEET_ID 'Sheet1!A:B' --values '[["Coffee", 5]]'
+```
+
+To use the configured ID instead:
+
+```dotenv
+GOOGLE_SHEETS_SPREADSHEET_ID=YOUR_SPREADSHEET_ID
+```
+
+Then omit the positional ID:
+
+```sh
+npm run start:sheets -- get 'Sheet1!A1:C10'
 ```
 
 `--values -` reads a JSON array of rows from standard input:
@@ -84,9 +99,35 @@ npm run start:sheets -- append SPREADSHEET_ID 'Sheet1!A:B' --values '[["Coffee",
 printf '[["Coffee", 5]]' | npm run start:sheets -- append SPREADSHEET_ID 'Sheet1!A:B' --values -
 ```
 
+Fill category totals from a saved JSON file, or pipe the category JSON output
+from `rmz-revolut-spending`. The `YYYY-MM` value selects a tab with the same
+name. The command reads category names from `A43:A70` and writes the matching
+RON totals to column D for profile Z (the default) or column C for profile N.
+Sheet category names are matched case-insensitively after trimming whitespace;
+categories absent from the input are written as `0`.
+
+```sh
+npm run start:sheets -- fill-spendings 2026-09 --spending-input ./spendings.json
+npm --silent run start:revolut-spending -- categories ./spending.html \
+  | npm --silent run start:sheets -- fill-spendings 2026-09 --spending-input -
+npm run start:sheets -- fill-spendings 2026-09 \
+  --spending-input ./spendings.json --profile N --spreadsheet-id SPREADSHEET_ID
+```
+
+In the pipeline, `--silent` suppresses npm's own banner and log output, not the
+CLI's output. It keeps npm output from the producer from being mixed into the
+category JSON that the Sheets CLI reads. On the final command, it just keeps
+npm's banner out of the terminal.
+
+If a category in the input does not exist in the selected sheet tab, the
+command reports an error instead of silently dropping the amount. When
+`--spreadsheet-id` is omitted, `GOOGLE_SHEETS_SPREADSHEET_ID` must be set in a
+`.env` file in the working directory; this command does not prompt for an ID.
+
 Updates use the Sheets API's `USER_ENTERED` mode, so values are interpreted as
 if entered in the Google Sheets UI. Append inserts new rows after the existing
-table. The tool does not store credentials or spreadsheet contents.
+table. The tool does not store credentials, spreadsheet contents, or spending
+input.
 
 ## Development
 
@@ -95,6 +136,25 @@ Run the unit tests with:
 ```sh
 npm test --prefix packages/google-sheets
 ```
+
+This runs the offline unit tests, including the `SHEETS-004` import tests in
+`tests/cli.test.ts`. They check spending input parsing and use a mock Sheets
+client to verify the import reads the category range and writes to the
+requested column. They do not need Google credentials or modify a real sheet.
+
+For a live end-to-end check, use a disposable spreadsheet with a `2026-09` tab
+and `Groceries` in `A43:A70`. Configure Google credentials with access to it,
+then run this from the repository root:
+
+```sh
+printf '[{"category":"Groceries","ron":25}]' \
+  | npm --silent run start:sheets -- fill-spendings 2026-09 \
+    --spending-input - --spreadsheet-id TEST_SPREADSHEET_ID
+```
+
+This performs a real update, not a dry run: profile Z (the default) writes
+`D43:D70`, while profile N writes `C43:C70`. Categories missing from the input
+are written as `0`, so use a disposable test tab.
 
 To manually verify access to a Google Sheet, configure Application Default
 Credentials and share the test sheet with the authenticated account. Create
