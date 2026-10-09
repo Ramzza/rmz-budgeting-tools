@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { run } from "../src/cli.js";
 
 const statement = [
@@ -76,6 +78,51 @@ test("PRD-005: CLI outputs extracted category RON amounts as JSON and CSV", asyn
     await assert.rejects(
       run(["categories", path, "--from", "2025-01-01"]),
       /only supported for transactions and summary/,
+    );
+  });
+});
+
+test("SPEND-008: categories writes selected JSON and CSV output to a file instead of stdout", async () => {
+  await withHtml(async (path) => {
+    const directory = dirname(path);
+    const cliPath = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
+    const packagePath = fileURLToPath(new URL("../", import.meta.url));
+    const jsonPath = join(directory, "categories.json");
+    const jsonResult = spawnSync(
+      process.execPath,
+      ["--import", "tsx", cliPath, "categories", path, "--output", jsonPath],
+      { cwd: packagePath, encoding: "utf8" },
+    );
+    assert.equal(jsonResult.status, 0, jsonResult.stderr);
+    assert.equal(jsonResult.stdout, "");
+    assert.equal(jsonResult.stderr, "");
+    assert.equal(
+      await readFile(jsonPath, "utf8"),
+      `${JSON.stringify([{ category: "Groceries", ron: 20 }], null, 2)}\n`,
+    );
+
+    const csvPath = join(directory, "categories.csv");
+    const csvResult = spawnSync(
+      process.execPath,
+      ["--import", "tsx", cliPath, "categories", path, "--format", "csv", "--output", csvPath],
+      { cwd: packagePath, encoding: "utf8" },
+    );
+    assert.equal(csvResult.status, 0, csvResult.stderr);
+    assert.equal(csvResult.stdout, "");
+    assert.equal(csvResult.stderr, "");
+    assert.equal(await readFile(csvPath, "utf8"), "category,ron\nGroceries,20\n");
+  });
+});
+
+test("SPEND-008: categories requires an output path and other commands reject --output", async () => {
+  await withStatement(async (path) => {
+    await assert.rejects(
+      run(["categories", path, "--output"]),
+      /Missing value for --output/,
+    );
+    await assert.rejects(
+      run(["transactions", path, "--output", join(dirname(path), "transactions.json")]),
+      /only supported for categories/,
     );
   });
 });

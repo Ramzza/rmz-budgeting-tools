@@ -29,6 +29,8 @@ npm start -- summary ./statement.csv
 
 # Extract category totals from a Revolut spending breakdown HTML file:
 npm start -- categories ./spending.html
+npm start -- categories ./spending.html --output ./categories.json
+npm start -- categories ./spending.html --format csv --output ./categories.csv
 
 # Save a spending category breakdown through a visible browser:
 npm start -- browser-login
@@ -53,6 +55,9 @@ Date`, `Started Date`, `Description`, `Amount`, `Currency`, `State`, `Category`,
 and `Type`. The `categories` command reads the category breakdown buttons in a
 locally saved Revolut spending HTML file and outputs each category with its
 absolute numeric RON amount; transaction counts and percentages are omitted.
+The command writes JSON or CSV to stdout by default. Use `--output FILE` to
+write the selected format to a local file instead; the target directory must
+already exist.
 The `browser-login` command saves this HTML format to
 `output/spending-YYYY-MM.html`, using the selected Analytics period.
 
