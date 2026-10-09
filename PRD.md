@@ -4,9 +4,10 @@
 
 Consolidate the Google Sheets, market-data, and Revolut spending tools into one
 TypeScript monorepo as a foundation for a future monthly budgeting workflow.
-The existing tools remain independently usable. Scheduled end-to-end monthly
-extraction and sheet updates are out of scope until the budgeting-sheet schema,
-data mapping, schedule, and credential flow are specified.
+The existing tools remain independently usable, and the Google Sheets CLI
+supports a manual JSON-based import of Revolut category totals into monthly
+tabs. Scheduled end-to-end extraction, market-data imports, and automated
+sheet updates remain out of scope.
 
 ## Requirements
 
@@ -22,6 +23,13 @@ data mapping, schedule, and credential flow are specified.
   **Verification:**
   - `packages/google-sheets/tests/cli.test.ts` tests tagged `PRD-002`.
   - `packages/google-sheets/tests/sheets.test.ts` tests tagged `PRD-002`.
+- **SHEETS-003 - Resolve spreadsheet ID:** Accept the existing positional spreadsheet ID or, when omitted, use `GOOGLE_SHEETS_SPREADSHEET_ID` from a `.env` file in the working directory. If neither is available, prompt for the ID; reject an empty response.
+  **Verification:**
+  - `packages/google-sheets/tests/cli.test.ts` tests tagged `SHEETS-003`.
+- **SHEETS-004 - Fill monthly category spendings:** Provide a `fill-spendings` command requiring a valid `YYYY-MM` month and spending JSON supplied inline, from a file, or from stdin (`-`). The month selects a sheet tab named exactly `YYYY-MM`. Resolve the optional spreadsheet ID from `--spreadsheet-id` or `GOOGLE_SHEETS_SPREADSHEET_ID` in the working-directory `.env`; fail without prompting if neither is available. Read category names from `A43:A70`, match category labels case-insensitively after trimming whitespace, and write numeric RON totals to the matching rows in column C for profile N or column D for profile Z (default). Categories present in the sheet but missing from the input receive `0`; input categories not present in the sheet are rejected rather than silently dropped. Do not persist spending input or sheet contents.
+  **Verification:**
+  - `packages/google-sheets/tests/spendings.test.ts` tests tagged `SHEETS-004`.
+  - `packages/google-sheets/tests/cli.test.ts` tests tagged `SHEETS-004`.
 - **MARKET-001 - Historical prices:** Fetch Yahoo Finance closing prices for a normalized ticker on one requested date; return only that date, normalized symbol, and close value, representing a non-finite close as `null`.
   **Verification:**
   - `packages/market-data/tests/prices.test.ts` tests tagged `PRD-001`.

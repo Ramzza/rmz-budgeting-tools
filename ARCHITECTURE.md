@@ -25,7 +25,9 @@ filesystems while keeping dependency installs reproducible. The root PRD maps
 each requirement to its package tests. The optional public homepage snapshot
 has a separate manually triggered workflow.
 
-The intended monthly flow—extract spending, stock values, and exchange rates,
-then update the budgeting sheet—is a future integration. It is not implemented
-until the target sheet schema, field mapping, run schedule, and credential
-strategy are defined.
+The Google Sheets CLI supports a manual monthly category fill from the JSON
+output of the Revolut spending package. It reads the category rows from the
+month-named tab and updates one profile column; JSON keeps the packages
+independent without adding a cross-package dependency or persistence layer.
+Scheduled extraction, market-data imports, and automatic sheet updates remain
+future work.
