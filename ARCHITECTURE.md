@@ -1,33 +1,52 @@
 # Architecture
 
-`rmz-budgeting-tools` is a TypeScript monorepo with three independent packages
-and separate lockfiles. The root package provides reproducible dependency
-installation, build/test orchestration, shared CI, and product documentation;
-it does not add a cross-package data pipeline or persistence layer.
+`rmz-budgeting-tools` is one Node.js 22+ TypeScript application. It has one
+root `package.json`, lockfile, TypeScript configuration, and `src/` tree; the
+three domain modules do not have separate project setup or package manifests.
 
-## Packages
+## Source layout
 
-- `packages/google-sheets` contains the `rmz-sheets` CLI and Google Sheets API
-  wrapper. It uses Google Application Default Credentials configured outside
-  the repository and does not store credentials or spreadsheet contents.
-- `packages/market-data` contains the `rmz-market-data` CLI and library. It
-  fetches Yahoo Finance closing prices and CursBNR exchange rates on demand;
-  results are not cached or persisted.
-- `packages/revolut-spending` contains the `rmz-revolut-spending` CLI. CSV and
-  saved HTML processing stays local. Only the explicit `browser-login` command
-  opens a visible browser after user invocation and manual authentication; it
-  saves only the selected category container and never persists credentials or
-  authentication state.
+- `src/cli.ts` is the main executable. It runs the monthly workflow by default
+  and forwards `sheets`, `market-data`, and `revolut` commands to their module
+  CLIs.
+- `src/monthly-workflow.ts` coordinates sheet reads, local spending parsing,
+  historical price and rate lookups, and one batch write. It validates the
+  complete update set before writing.
+- `src/google-sheets/` owns the Sheets API adapter, its module CLI, monthly
+  category input logic, and header-driven sheet layout analysis.
+- `src/market-data/` owns Yahoo Finance and CursBNR providers, date handling,
+  errors, and the independently callable market-data CLI.
+- `src/revolut-spending/` owns local CSV and saved-HTML parsing, the explicit
+  browser capture flow, and its independently callable CLI.
+- `tests/` contains all unit, integration-configuration, requirement, and
+  optional browser snapshot tests. `playwright.config.ts` configures only the
+  manually triggered public homepage snapshot.
 
-Each package owns its source, tests, lockfile, and domain documentation. Root
-npm scripts invoke each package by path, avoiding workspace symlinks on shared
-filesystems while keeping dependency installs reproducible. The root PRD maps
-each requirement to its package tests. The optional public homepage snapshot
-has a separate manually triggered workflow.
+## Monthly workflow
 
-The Google Sheets CLI supports a manual monthly category fill from the JSON
-output of the Revolut spending package. It reads the category rows from the
-month-named tab and updates one profile column; JSON keeps the packages
-independent without adding a cross-package dependency or persistence layer.
-Scheduled extraction, market-data imports, and automatic sheet updates remain
-future work.
+The requested worksheet tab is named `YYYY-MM`. The workflow reads `A:ZZ` and
+discovers three tables by the exact trimmed, case-insensitive headers
+documented in [README.md](README.md): spending categories, tickers, and
+currencies. For each table, input rows start immediately after its header and
+stop at the first blank key. The table output columns are the only cells the
+workflow changes.
+
+The source date is the last calendar day of the selected month. Yahoo Finance
+and CursBNR data use the latest available date on or before that date. The
+workflow parses the saved `output/spending-YYYY-MM.html` locally by default;
+it never launches a browser implicitly. Provider data and category matches
+must all validate before one Sheets batch update is sent.
+
+## Data and credential boundaries
+
+- Google authentication uses Application Default Credentials configured
+  outside the repository. Spreadsheet contents are read only for the selected
+  tab and are not persisted.
+- Saved Revolut HTML and CSV statements are local inputs. Browser capture is
+  opt-in, visible, and requires manual sign-in; it saves only the category
+  container and never stores credentials or authentication state.
+- Historical market requests are made on demand and are not cached or
+  persisted. Provider/network failures stop the monthly write.
+- `PRD.md` is the requirements source of truth. Requirement tests run in the
+  standard root test command; only the live public homepage visual check is
+  excluded from standard CI.

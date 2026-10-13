@@ -2,24 +2,38 @@
   "name": "rmz-budgeting-tools",
   "version": "0.1.0",
   "private": true,
-  "description": "A TypeScript monorepo for spending, market data, and Google Sheets budgeting tools",
+  "description": "Monthly budgeting CLI for Revolut spending, market data, and Google Sheets",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "rmz-budgeting-tools": "dist/cli.js"
+  },
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "install:packages": "npm ci --prefix packages/google-sheets && npm ci --prefix packages/market-data && npm ci --prefix packages/revolut-spending",
-    "build": "npm run build --prefix packages/google-sheets && npm run build --prefix packages/market-data && npm run build --prefix packages/revolut-spending",
-    "test:packages": "npm test --prefix packages/google-sheets && npm test --prefix packages/market-data && npm test --prefix packages/revolut-spending",
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
     "test:requirements": "node --import tsx --test tests/*.test.ts",
-    "test": "npm run test:packages && npm run test:requirements",
-    "start:sheets": "node packages/google-sheets/dist/src/cli.js",
-    "start:market-data": "node packages/market-data/dist/cli.js",
-    "start:revolut-spending": "node packages/revolut-spending/dist/cli.js",
-    "test:browser-snapshot": "npm run test:browser-snapshot --prefix packages/revolut-spending"
+    "test": "npm run build && npm run test:requirements",
+    "start": "node dist/cli.js",
+    "dev": "node --import tsx src/cli.ts",
+    "start:sheets": "node dist/cli.js sheets",
+    "start:market-data": "node dist/cli.js market-data",
+    "start:revolut-spending": "node dist/cli.js revolut",
+    "test:connection": "node --env-file=.env --import tsx --test tests/sheets-connection.integration.ts",
+    "test:browser-snapshot": "node node_modules/@playwright/test/cli.js test tests/revolut-browser-snapshot.spec.ts"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "commander": "^14.0.0",
+    "googleapis": "^183.0.0",
+    "playwright": "^1.63.0",
+    "yahoo-finance2": "^4.0.2"
   },
   "devDependencies": {
-    "tsx": "^4.20.0"
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
   }
 }
