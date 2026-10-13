@@ -1,75 +1,107 @@
 # rmz-budgeting-tools
 
-A TypeScript monorepo that brings together the existing Google Sheets,
-market-data, and Revolut spending tools for a manual monthly budgeting workflow.
-See [PRD.md](PRD.md) for requirements and [ARCHITECTURE.md](ARCHITECTURE.md)
-for package boundaries.
+A single TypeScript CLI for the monthly budgeting workflow, with independently
+callable Google Sheets, market-data, and Revolut spending modules. See
+[PRD.md](PRD.md) for requirements and [ARCHITECTURE.md](ARCHITECTURE.md) for
+module boundaries.
 
-The three CLIs remain independently usable. Revolut category JSON can be piped
-into the Google Sheets CLI to fill monthly sheet tabs. Scheduled extraction
-and market-data imports are not included.
+## Setup
 
-## Packages
-
-- [`packages/google-sheets`](packages/google-sheets/README.md): read and edit
-  Google Sheets ranges using Application Default Credentials.
-- [`packages/market-data`](packages/market-data/README.md): retrieve historical
-  stock/ETF prices and RON exchange rates.
-- [`packages/revolut-spending`](packages/revolut-spending/README.md): process
-  local Revolut CSV statements and spending breakdown HTML, with an explicit
-  opt-in browser capture command.
-
-## Setup and checks
-
-Requires Node.js 22 or later. From the repository root:
+Requires Node.js 22 or later. Install, build, and test the single project:
 
 ```sh
 npm ci
-npm run install:packages
 npm run build
 npm test
 ```
 
-## Use
+Copy `.env.example` to `.env` and set `GOOGLE_SHEETS_SPREADSHEET_ID`, or pass a
+sheet ID on the command line. Configure Google Application Default Credentials
+outside this repository; the CLI does not save credentials.
 
-Build before running a CLI. Examples from the repository root:
+## Monthly sheet convention
+
+Create one worksheet tab per month named exactly `YYYY-MM`. The CLI scans the
+columns `A:ZZ` of the tab for one table of each type below. Header text is
+matched case-insensitively after trimming whitespace, and the tables may be
+placed anywhere in that range.
+Put input keys in the first column shown; rows continue until the first blank
+key cell. The remaining columns are CLI outputs and must stay in the shown
+order.
+
+| Budget Category | Revolut Spend (RON) |
+| --- | ---: |
+| Groceries | |
+| Transport | |
+
+| Ticker | Share Price | Price Currency | Price Date |
+| --- | ---: | --- | --- |
+| AAPL | | | |
+
+| Currency | RON per Unit | Rate Date |
+| --- | ---: | --- |
+| EUR | | |
+| USD | | |
+
+The spending categories must match the saved Revolut breakdown. Tickers and
+currency codes are inputs; prices and rates use the latest available source
+date on or before the month's last calendar day. The RON rate is always 1.
+Missing or ambiguous tables, unknown spending categories, or unavailable data
+stop the workflow before any cells are written.
+
+## Monthly workflow
+
+The default month is the previous calendar month. By default, spending is read
+from `output/spending-YYYY-MM.html`; use `--spending-file` to choose another
+local HTML file. Browser capture is always a separate explicit command.
 
 ```sh
-npm run start:market-data -- prices AAPL --date 2024-01-02
-npm run start:market-data -- exchange-rates \
-  --start 2024-01-02 --end 2024-01-02 --currencies EUR
-
-npm run start:revolut-spending -- transactions ./statement.csv
-npm run start:revolut-spending -- summary ./statement.csv
-npm run start:revolut-spending -- categories ./spending.html
-npm run start:revolut-spending -- browser-login last
-
-npm run start:sheets -- get SPREADSHEET_ID 'Sheet1!A1:C10'
-npm run start:sheets -- fill-spendings 2026-09 \
-  --spending-input ./spendings.json
-npm --silent run start:revolut-spending -- categories ./spending.html \
-  | npm --silent run start:sheets -- fill-spendings 2026-09 --spending-input -
+npm start -- 2026-09 --sheet-id SPREADSHEET_ID
+npm start -- --sheet-id SPREADSHEET_ID
+npm start -- 2026-09 --spending-file ./spending.html
 ```
 
-In this pipeline, `--silent` suppresses npm's own output so it does not get
-mixed into the category JSON sent to Sheets; it does not silence either CLI.
-See the [Google Sheets README](packages/google-sheets/README.md) for offline
-unit-test and live-import instructions.
+When `--sheet-id` is omitted, the CLI reads `GOOGLE_SHEETS_SPREADSHEET_ID`
+from the working directory's `.env`. The monthly workflow reads the target
+sheet tab, analyzes its tables, extracts the saved Revolut categories, fetches
+prices and exchange rates, validates the complete result, and writes all
+output cells in one batch.
 
-The browser capture is manual and opt-in; it does not read, store, or handle
-credentials. Keep account exports, saved spending HTML, spreadsheet contents,
-and credential files outside Git. Google credentials must be configured
-outside the repository.
-For monthly imports, `GOOGLE_SHEETS_SPREADSHEET_ID` must be set in `.env` or
-passed with `--spreadsheet-id`; profile Z fills column D by default, while
-profile N fills column C. See the package guides for details.
+## Call a module independently
 
-## Optional browser snapshot
-
-The public Revolut homepage snapshot is not part of standard pull-request CI.
-Run it manually with:
+The main CLI forwards module commands while preserving their existing options
+and output formats:
 
 ```sh
-node packages/revolut-spending/node_modules/playwright/cli.js install chromium
+npm start -- sheets get SPREADSHEET_ID 'Sheet1!A1:C10'
+npm start -- sheets fill-spendings 2026-09 \
+  --spending-input ./spendings.json --spreadsheet-id SPREADSHEET_ID
+npm start -- market-data prices AAPL --date 2026-09-30
+npm start -- market-data exchange-rates \
+  --start 2026-09-30 --end 2026-09-30 --currencies EUR
+npm start -- revolut transactions ./statement.csv
+npm start -- revolut summary ./statement.csv
+npm start -- revolut categories ./output/spending-2026-09.html
+npm start -- revolut categories ./output/spending-2026-09.html --output ./categories.json
+npm start -- revolut browser-login last
+```
+
+The categories command prints JSON or CSV by default. Use `--output FILE` to
+write that format to a file instead; the destination directory must exist.
+`browser-login` opens visible Chromium only after explicit invocation and
+requires manual sign-in. It saves only the spending category container; never
+commit account exports, saved spending HTML, sheet contents, credentials, or
+authentication state.
+
+## Optional checks
+
+The live homepage snapshot is separate from standard CI and runs only when
+manually requested:
+
+```sh
+node node_modules/playwright/cli.js install chromium
 npm run test:browser-snapshot
 ```
+
+Run the live Google Sheets connection smoke test with root `.env` configured:
+`npm run test:connection`.

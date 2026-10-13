@@ -15,6 +15,6 @@ credentials.json
 **/output/
 test-results/
 playwright-report/
-/packages/revolut-spending/spending.html
-/packages/revolut-spending/tests/resources/*.png
-!/packages/revolut-spending/tests/resources/01-revolut-homepage.png
+/spending.html
+/tests/resources/*.png
+!/tests/resources/01-revolut-homepage.png

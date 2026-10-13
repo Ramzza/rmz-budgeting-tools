@@ -3,58 +3,35 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
-type PackageManifest = {
-  name?: string;
-  scripts?: Record<string, string>;
-};
-
-test("MONOREPO-001: root commands install, build, and test each package", () => {
+test("MONOREPO-001: one root project owns all source, dependencies, and commands", () => {
   const root = process.cwd();
-  const rootManifestPath = join(root, "package.json");
-  assert.ok(existsSync(rootManifestPath), "root package.json must exist");
+  const manifestPath = join(root, "package.json");
+  assert.ok(existsSync(manifestPath), "root package.json must exist");
 
-  const rootManifest: PackageManifest = JSON.parse(readFileSync(rootManifestPath, "utf8"));
-  const expectedPackages = [
-    ["packages/google-sheets", "rmz-google-sheets"],
-    ["packages/market-data", "rmz-market-data"],
-    ["packages/revolut-spending", "rmz-revolut-spending"],
-  ] as const;
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+    bin?: Record<string, string>;
+    scripts?: Record<string, string>;
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
 
-  const installScript = rootManifest.scripts?.["install:packages"] ?? "";
-  const buildScript = rootManifest.scripts?.build ?? "";
-  const testScript = rootManifest.scripts?.["test:packages"] ?? "";
-  assert.ok(installScript, "root npm scripts must install each package");
-  assert.ok(buildScript, "root npm scripts must build each package");
-  assert.ok(rootManifest.scripts?.test, "root npm scripts must test each package");
-  assert.ok(testScript, "root npm scripts must run every package test command");
-
-  const workflowPath = join(root, ".github/workflows/build-test.yml");
-  assert.ok(existsSync(workflowPath), "root build-and-test workflow must exist");
-  const workflow = readFileSync(workflowPath, "utf8");
-  assert.match(workflow, /pull_request:/, "pull requests must run the root workflow");
-  assert.match(workflow, /npm run install:packages/, "the root workflow must install all package dependencies");
-  assert.match(workflow, /npm run build/, "the root workflow must build all packages");
-  assert.match(workflow, /npm test/, "the root workflow must run all tests");
-
-  for (const [relativePath, packageName] of expectedPackages) {
-    const manifestPath = join(root, relativePath, "package.json");
-    assert.ok(existsSync(manifestPath), `${packageName} manifest must exist`);
-    assert.ok(existsSync(join(root, relativePath, "package-lock.json")), `${packageName} lockfile must exist`);
-    const manifest: PackageManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-    assert.equal(manifest.name, packageName);
-    assert.ok(manifest.scripts?.build, `${packageName} must define a build command`);
-    assert.ok(manifest.scripts?.test, `${packageName} must define a test command`);
-    assert.ok(
-      installScript.includes(`npm ci --prefix ${relativePath}`),
-      `${packageName} must install from its package path`,
-    );
-    assert.ok(
-      buildScript.includes(`npm run build --prefix ${relativePath}`),
-      `${packageName} must build from its package path`,
-    );
-    assert.ok(
-      testScript.includes(`npm test --prefix ${relativePath}`),
-      `${packageName} tests must run from its package path`,
-    );
+  assert.ok(existsSync(join(root, "src/cli.ts")), "main CLI must be in root src/");
+  assert.ok(existsSync(join(root, "src/google-sheets")), "Sheets module must live under root src/");
+  assert.ok(existsSync(join(root, "src/market-data")), "market-data module must live under root src/");
+  assert.ok(existsSync(join(root, "src/revolut-spending")), "Revolut module must live under root src/");
+  assert.ok(existsSync(join(root, "tsconfig.json")), "one root TypeScript configuration must exist");
+  for (const moduleName of ["google-sheets", "market-data", "revolut-spending"]) {
+    const packagePath = join(root, "packages", moduleName);
+    assert.equal(existsSync(join(packagePath, "package.json")), false, `${moduleName} must not have a separate manifest`);
+    assert.equal(existsSync(join(packagePath, "package-lock.json")), false, `${moduleName} must not have a separate lockfile`);
+    assert.equal(existsSync(join(packagePath, "README.md")), false, `${moduleName} must not have a separate setup guide`);
+    assert.equal(existsSync(join(packagePath, "src")), false, `${moduleName} source must move under root src/`);
   }
+  assert.equal(manifest.bin?.["rmz-budgeting-tools"], "dist/cli.js");
+  assert.ok(manifest.scripts?.build, "root build command must exist");
+  assert.ok(manifest.scripts?.test, "root test command must exist");
+  assert.ok(manifest.scripts?.start, "root start command must exist");
+  assert.ok(manifest.dependencies?.googleapis, "Google Sheets runtime dependency must be installed at root");
+  assert.ok(manifest.dependencies?.["yahoo-finance2"], "market-data runtime dependency must be installed at root");
+  assert.ok(manifest.dependencies?.playwright, "browser capture runtime dependency must be installed at root");
 });
