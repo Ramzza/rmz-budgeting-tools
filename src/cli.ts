@@ -39,8 +39,9 @@ function usage(): string {
 
 The monthly workflow defaults to the previous month and reads
 output/spending-YYYY-MM.html. The sheet ID comes from --sheet-id or
-GOOGLE_SHEETS_SPREADSHEET_ID in the current directory's .env.
-The month tab must contain the documented spending, ticker, and currency tables.
+GOOGLE_SHEETS_SPREADSHEET_ID in the current directory's .env; it identifies the
+spreadsheet for that year, and the month selects the two-digit MM tab.
+The tab must contain the documented spending, ticker, and currency tables.
 `;
 }
 

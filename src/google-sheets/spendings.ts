@@ -24,6 +24,10 @@ export function validateYearMonth(value: string): string {
   return value;
 }
 
+export function getMonthTabName(yearMonth: string): string {
+  return validateYearMonth(yearMonth).slice(5);
+}
+
 export function parseCategorySpendings(value: unknown): CategorySpend[] {
   if (!Array.isArray(value)) {
     throw new Error("spending input must be a JSON array of category and ron values");
@@ -99,13 +103,14 @@ export async function fillSpendings(
   spendings: CategorySpend[],
 ): Promise<sheets_v4.Schema$UpdateValuesResponse> {
   const month = validateYearMonth(yearMonth);
+  const monthTab = getMonthTabName(month);
   if (profile !== "N" && profile !== "Z") {
     throw new Error("profile must be N or Z");
   }
-  const categoryRange = `'${month}'!A${FIRST_CATEGORY_ROW}:A${LAST_CATEGORY_ROW}`;
+  const categoryRange = `'${monthTab}'!A${FIRST_CATEGORY_ROW}:A${LAST_CATEGORY_ROW}`;
   const categories = await getValues(sheets, spreadsheetId, categoryRange);
   const values = mapCategorySpendingsToValues(categories, spendings);
   const column = profile === "N" ? "C" : "D";
-  const spendingRange = `'${month}'!${column}${FIRST_CATEGORY_ROW}:${column}${LAST_CATEGORY_ROW}`;
+  const spendingRange = `'${monthTab}'!${column}${FIRST_CATEGORY_ROW}:${column}${LAST_CATEGORY_ROW}`;
   return updateValues(sheets, spreadsheetId, spendingRange, values);
 }

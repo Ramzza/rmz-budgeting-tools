@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const workflowModule = await import("../src/monthly-workflow.js").catch(() => undefined);
+const layoutModule = await import("../src/google-sheets/sheet-layout.js").catch(() => undefined);
 
 const sheetValues = [
   ["Budget Category", "Revolut Spend (RON)", null, null, "Ticker", "Share Price", "Price Currency", "Price Date", null, "Currency", "RON per Unit", "Rate Date"],
@@ -18,13 +19,13 @@ test("APP-002: validates the full month and batches discovered spending, price, 
   const result = await workflowModule.runMonthlyWorkflow(
     {
       yearMonth: "2026-09",
-      spreadsheetId: "sheet-123",
+      spreadsheetId: "spreadsheet-for-2026",
       spendingFile: "spending.html",
     },
     {
       readSheet: async (spreadsheetId: string, range: string) => {
-        assert.equal(spreadsheetId, "sheet-123");
-        assert.equal(range, "'2026-09'!A:ZZ");
+        assert.equal(spreadsheetId, "spreadsheet-for-2026");
+        assert.equal(range, "'09'!A:ZZ");
         return sheetValues;
       },
       readSpendingHtml: async (path: string) => {
@@ -52,13 +53,13 @@ test("APP-002: validates the full month and batches discovered spending, price, 
   assert.deepEqual(requestedPrices, ["AAPL:2026-09-30"]);
   assert.deepEqual(requestedCurrencies, [["EUR"]]);
   assert.deepEqual(writes, [
-    { range: "'2026-09'!B2", values: [[75]] },
-    { range: "'2026-09'!B3", values: [[0]] },
-    { range: "'2026-09'!F2", values: [[191.5]] },
-    { range: "'2026-09'!G2", values: [["USD"]] },
-    { range: "'2026-09'!H2", values: [["2026-09-30"]] },
-    { range: "'2026-09'!K2", values: [[5.08]] },
-    { range: "'2026-09'!L2", values: [["2026-09-30"]] },
+    { range: "'09'!B2", values: [[75]] },
+    { range: "'09'!B3", values: [[0]] },
+    { range: "'09'!F2", values: [[191.5]] },
+    { range: "'09'!G2", values: [["USD"]] },
+    { range: "'09'!H2", values: [["2026-09-30"]] },
+    { range: "'09'!K2", values: [[5.08]] },
+    { range: "'09'!L2", values: [["2026-09-30"]] },
   ]);
   assert.deepEqual(result, {
     yearMonth: "2026-09",
@@ -73,7 +74,7 @@ test("APP-002: does not write partial updates when spending does not match the s
 
   await assert.rejects(
     workflowModule.runMonthlyWorkflow(
-      { yearMonth: "2026-09", spreadsheetId: "sheet-123", spendingFile: "spending.html" },
+      { yearMonth: "2026-09", spreadsheetId: "spreadsheet-for-2026", spendingFile: "spending.html" },
       {
         readSheet: async () => sheetValues,
         readSpendingHtml: async () =>
@@ -90,4 +91,30 @@ test("APP-002: does not write partial updates when spending does not match the s
     /not found in sheet categories/,
   );
   assert.equal(writeCount, 0);
+});
+
+test("APP-002: buildMonthlyUpdates targets the two-digit tab in the yearly spreadsheet", () => {
+  assert.ok(workflowModule, "the monthly workflow module must be available");
+  assert.ok(layoutModule, "the monthly sheet layout analyzer must be available");
+
+  const updates = workflowModule.buildMonthlyUpdates(
+    "2027-01",
+    layoutModule.analyzeMonthlySheet(sheetValues),
+    [{ category: "Groceries", ron: 75 }],
+    [{
+      currency: "USD",
+      quote: { date: "2027-01-31", symbol: "AAPL", close: 191.5 },
+    }],
+    [{ date: "2027-01-31", currency: "EUR", ronPerUnit: 5.08 }],
+  );
+
+  assert.deepEqual(updates.map(({ range }) => range), [
+    "'01'!B2",
+    "'01'!B3",
+    "'01'!F2",
+    "'01'!G2",
+    "'01'!H2",
+    "'01'!K2",
+    "'01'!L2",
+  ]);
 });

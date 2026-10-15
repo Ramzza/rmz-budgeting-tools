@@ -3,6 +3,7 @@ import test from "node:test";
 import type { sheets_v4 } from "googleapis";
 import {
   fillSpendings,
+  getMonthTabName,
   mapCategorySpendingsToValues,
   parseCategorySpendings,
   validateYearMonth,
@@ -43,6 +44,11 @@ test("SHEETS-004: accepts valid year-month values and rejects invalid months", (
   for (const value of ["0000-01", "2026-00", "2026-13", "2026-9", "26-09"]) {
     assert.throws(() => validateYearMonth(value), /year-month must use YYYY-MM format/i);
   }
+});
+
+test("SHEETS-004: maps all valid months to two-digit sheet tabs", () => {
+  const months = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
+  assert.deepEqual(months.map((month) => getMonthTabName(`2026-${month}`)), months);
 });
 
 test("SHEETS-004: validates the Revolut category JSON shape", () => {
@@ -96,7 +102,7 @@ test("SHEETS-004: rejects input categories that are not present in the sheet", (
   );
 });
 
-test("SHEETS-004: reads categories and updates the profile column in the month tab", async () => {
+test("SHEETS-004: reads categories and updates the profile column in the month-number tab", async () => {
   const categories: Values = [["Groceries"], ["Rent"]];
   const spendings = [{ category: "Rent", ron: 800 }, { category: "Groceries", ron: 125.75 }];
 
@@ -105,19 +111,19 @@ test("SHEETS-004: reads categories and updates the profile column in the month t
     const result = await fillSpendings(client, "spreadsheet-1", "2026-09", profile, spendings);
 
     assert.deepEqual(result, {
-      updatedRange: `'2026-09'!${column}43:${column}70`,
+      updatedRange: `'09'!${column}43:${column}70`,
       updatedRows: 28,
     });
     assert.deepEqual(calls.map(({ method, params }) => ({ method, params })), [
       {
         method: "get",
-        params: { spreadsheetId: "spreadsheet-1", range: "'2026-09'!A43:A70" },
+        params: { spreadsheetId: "spreadsheet-1", range: "'09'!A43:A70" },
       },
       {
         method: "update",
         params: {
           spreadsheetId: "spreadsheet-1",
-          range: `'2026-09'!${column}43:${column}70`,
+          range: `'09'!${column}43:${column}70`,
           valueInputOption: "USER_ENTERED",
           requestBody: {
             values: [

@@ -6,8 +6,8 @@ Consolidate the Google Sheets, market-data, and Revolut spending tools into one
 TypeScript application with a single root package and one `src/` directory.
 The root CLI orchestrates the monthly workflow while retaining independent
 commands for each tool. It reads local Revolut spending HTML, fetches market
-data on demand, and fills a month-named Google Sheets tab without persisting
-account data or automating browser sign-in.
+data on demand, and fills the month-numbered tab in the selected year's Google
+Sheets spreadsheet without persisting account data or automating browser sign-in.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ account data or automating browser sign-in.
 - **SHEETS-003 - Resolve spreadsheet ID:** Accept the existing positional spreadsheet ID or, when omitted, use `GOOGLE_SHEETS_SPREADSHEET_ID` from a `.env` file in the working directory. If neither is available, prompt for the ID; reject an empty response.
   **Verification:**
   - `tests/sheets-cli.test.ts` tests tagged `SHEETS-003`.
-- **SHEETS-004 - Fill monthly category spendings:** Provide a `fill-spendings` command requiring a valid `YYYY-MM` month and spending JSON supplied inline, from a file, or from stdin (`-`). The month selects a sheet tab named exactly `YYYY-MM`. Resolve the optional spreadsheet ID from `--spreadsheet-id` or `GOOGLE_SHEETS_SPREADSHEET_ID` in the working-directory `.env`; fail without prompting if neither is available. Read category names from `A43:A70`, match category labels case-insensitively after trimming whitespace, and write numeric RON totals to the matching rows in column C for profile N or column D for profile Z (default). Categories present in the sheet but missing from the input receive `0`; input categories not present in the sheet are rejected rather than silently dropped. Do not persist spending input or sheet contents.
+- **SHEETS-004 - Fill monthly category spendings:** Provide a `fill-spendings` command requiring a valid `YYYY-MM` month and spending JSON supplied inline, from a file, or from stdin (`-`). The spreadsheet ID identifies the workbook for the requested year, and the month selects a sheet tab named exactly `MM` (the two-digit month). Resolve the optional spreadsheet ID from `--spreadsheet-id` or `GOOGLE_SHEETS_SPREADSHEET_ID` in the working-directory `.env`; fail without prompting if neither is available. Read category names from `A43:A70`, match category labels case-insensitively after trimming whitespace, and write numeric RON totals to the matching rows in column C for profile N or column D for profile Z (default). Categories present in the sheet but missing from the input receive `0`; input categories not present in the sheet are rejected rather than silently dropped. Do not persist spending input or sheet contents.
   **Verification:**
   - `tests/sheets-spendings.test.ts` tests tagged `SHEETS-004`.
   - `tests/sheets-cli.test.ts` tests tagged `SHEETS-004`.
@@ -69,13 +69,13 @@ account data or automating browser sign-in.
 - **MONOREPO-001 - Unified TypeScript project:** Keep all application source under root `src/`, use one root package manifest and lockfile, and provide root install, build, test, and start commands. Do not retain package-specific manifests, lockfiles, or setup documentation. Keep domain modules independently callable through the main CLI.
   **Verification:**
   - `tests/monorepo.test.ts` tests tagged `MONOREPO-001`.
-- **APP-001 - Unified monthly CLI:** Accept an optional `YYYY-MM` and `--sheet-id ID`. The month defaults to the previous calendar month. Resolve the sheet ID from `--sheet-id` first, then `GOOGLE_SHEETS_SPREADSHEET_ID` in the current working directory's `.env`; fail clearly when neither is set.
+- **APP-001 - Unified monthly CLI:** Accept an optional `YYYY-MM` and `--sheet-id ID`. The spreadsheet ID identifies the workbook for the requested year; the month selects its `MM` tab. The month defaults to the previous calendar month. Resolve the sheet ID from `--sheet-id` first, then `GOOGLE_SHEETS_SPREADSHEET_ID` in the current working directory's `.env`; fail clearly when neither is set.
   **Verification:**
   - `tests/main-cli.test.ts` tests tagged `APP-001`.
-- **SHEETS-005 - Discover monthly sheet layout:** Read columns `A:ZZ` of the selected `YYYY-MM` tab and discover the budgeting tables by their headers, regardless of their positions within that range. Require exactly one table of each kind: `Budget Category` / `Revolut Spend (RON)`, `Ticker` / `Share Price` / `Price Currency` / `Price Date`, and `Currency` / `RON per Unit` / `Rate Date`. Treat rows immediately below each header as inputs until the first blank key cell, and write only to the associated output columns.
+- **SHEETS-005 - Discover monthly sheet layout:** Read columns `A:ZZ` of the `MM` tab in the selected year's spreadsheet and discover the budgeting tables by their headers, regardless of their positions within that range. Require exactly one table of each kind: `Budget Category` / `Revolut Spend (RON)`, `Ticker` / `Share Price` / `Price Currency` / `Price Date`, and `Currency` / `RON per Unit` / `Rate Date`. Treat rows immediately below each header as inputs until the first blank key cell, and write only to the associated output columns.
   **Verification:**
   - `tests/sheet-layout.test.ts` tests tagged `SHEETS-005`.
-- **APP-002 - Populate a monthly sheet:** Read category amounts from `output/spending-YYYY-MM.html` by default (or `--spending-file`), fetch the latest available closing price and exchange rate on or before the month's final calendar day for the ticker and currency inputs in the sheet, and fill the discovered tables. Validate all input and provider data before writing, then submit all cell updates in one batch. Never launch a browser as part of this workflow; browser capture remains an explicit command.
+- **APP-002 - Populate a monthly sheet:** Read category amounts from `output/spending-YYYY-MM.html` by default (or `--spending-file`), fetch the latest available closing price and exchange rate on or before the month's final calendar day for the ticker and currency inputs in the `MM` tab of the selected year's spreadsheet, and fill the discovered tables. Validate all input and provider data before writing, then submit all cell updates in one batch. Never launch a browser as part of this workflow; browser capture remains an explicit command.
   **Verification:**
   - `tests/monthly-workflow.test.ts` tests tagged `APP-002`.
 - **APP-003 - Call modules separately:** Expose the existing Sheets, market-data, and Revolut spending commands through the root CLI without changing their domain-level behavior.

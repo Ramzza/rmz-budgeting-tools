@@ -31,6 +31,16 @@ test("APP-001: monthly CLI defaults to the previous month and accepts an explici
   );
 });
 
+test("APP-001: help explains how the year and month select the spreadsheet and tab", async () => {
+  assert.ok(cliModule, "the root CLI module must be available");
+  const output: string[] = [];
+
+  await cliModule.run(["--help"], { writeStdout: (value: string) => output.push(value) });
+
+  assert.match(output.join(""), /spreadsheet for that year/i);
+  assert.match(output.join(""), /month selects the two-digit MM tab/i);
+});
+
 test("APP-003: the root CLI routes module-specific commands separately", () => {
   assert.ok(cliModule, "the root CLI module must be available");
   assert.deepEqual(cliModule.parseArguments(["sheets", "get", "sheet-123", "Budget!A1"]), {

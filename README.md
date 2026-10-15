@@ -15,16 +15,19 @@ npm run build
 npm test
 ```
 
-Copy `.env.example` to `.env` and set `GOOGLE_SHEETS_SPREADSHEET_ID`, or pass a
-sheet ID on the command line. Configure Google Application Default Credentials
-outside this repository; the CLI does not save credentials.
+Copy `.env.example` to `.env` and set `GOOGLE_SHEETS_SPREADSHEET_ID` to the
+spreadsheet for the year being processed, or pass that year's sheet ID on the
+command line. Configure Google Application Default Credentials outside this
+repository; the CLI does not save credentials.
 
 ## Monthly sheet convention
 
-Create one worksheet tab per month named exactly `YYYY-MM`. The CLI scans the
-columns `A:ZZ` of the tab for one table of each type below. Header text is
-matched case-insensitively after trimming whitespace, and the tables may be
-placed anywhere in that range.
+Keep a separate spreadsheet for each year, with worksheet tabs named exactly
+`01` through `12`. The `YYYY-MM` month argument identifies the year through
+the supplied spreadsheet ID and selects the corresponding two-digit `MM` tab.
+The CLI scans columns `A:ZZ` of that tab for one table of each type below.
+Header text is matched case-insensitively after trimming whitespace, and the
+tables may be placed anywhere in that range.
 Put input keys in the first column shown; rows continue until the first blank
 key cell. The remaining columns are CLI outputs and must stay in the shown
 order.
@@ -62,10 +65,10 @@ npm start -- 2026-09 --spending-file ./spending.html
 ```
 
 When `--sheet-id` is omitted, the CLI reads `GOOGLE_SHEETS_SPREADSHEET_ID`
-from the working directory's `.env`. The monthly workflow reads the target
-sheet tab, analyzes its tables, extracts the saved Revolut categories, fetches
-prices and exchange rates, validates the complete result, and writes all
-output cells in one batch.
+from the working directory's `.env`; that ID must identify the spreadsheet for
+the requested year. The monthly workflow reads the `MM` tab, analyzes its
+tables, extracts the saved Revolut categories, fetches prices and exchange
+rates, validates the complete result, and writes all output cells in one batch.
 
 ## Call a module independently
 
@@ -85,6 +88,9 @@ npm start -- revolut categories ./output/spending-2026-09.html
 npm start -- revolut categories ./output/spending-2026-09.html --output ./categories.json
 npm start -- revolut browser-login last
 ```
+
+For `fill-spendings`, use the ID for the spreadsheet containing the year in
+`YYYY-MM`; the command targets the corresponding `MM` tab.
 
 The categories command prints JSON or CSV by default. Use `--output FILE` to
 write that format to a file instead; the destination directory must exist.

@@ -24,12 +24,14 @@ three domain modules do not have separate project setup or package manifests.
 
 ## Monthly workflow
 
-The requested worksheet tab is named `YYYY-MM`. The workflow reads `A:ZZ` and
-discovers three tables by the exact trimmed, case-insensitive headers
-documented in [README.md](README.md): spending categories, tickers, and
-currencies. For each table, input rows start immediately after its header and
-stop at the first blank key. The table output columns are the only cells the
-workflow changes.
+Each year has a separate spreadsheet with worksheet tabs named `01` through
+`12`. The requested `YYYY-MM` identifies the year-specific spreadsheet through
+the supplied spreadsheet ID and selects the corresponding `MM` tab. The
+workflow reads `A:ZZ` and discovers three tables by the exact trimmed,
+case-insensitive headers documented in [README.md](README.md): spending
+categories, tickers, and currencies. For each table, input rows start
+immediately after its header and stop at the first blank key. The table output
+columns are the only cells the workflow changes.
 
 The source date is the last calendar day of the selected month. Yahoo Finance
 and CursBNR data use the latest available date on or before that date. The

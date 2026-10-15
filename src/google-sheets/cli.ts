@@ -49,6 +49,7 @@ function usage(): string {
 Pass --values - to read a JSON array of rows from standard input.
 For fill-spendings, --spending-input accepts JSON text, a JSON file path, or - for standard input.
 For get/update/append, if SPREADSHEET_ID is omitted, set GOOGLE_SHEETS_SPREADSHEET_ID in .env or enter it when prompted.
+For fill-spendings, YYYY-MM selects the MM tab in the spreadsheet for that year.
 For fill-spendings, if --spreadsheet-id is omitted, set GOOGLE_SHEETS_SPREADSHEET_ID in .env.`;
 }
 
