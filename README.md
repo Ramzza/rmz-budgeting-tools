@@ -53,9 +53,12 @@ command can write to the N profile with `--profile N`.
 
 ## Monthly workflow
 
-The default month is the previous calendar month. By default, spending is read
-from `output/spending-YYYY-MM.html`; use `--spending-file` to choose another
-local HTML file. Browser capture is always a separate explicit command.
+The default month is the previous calendar month. Unless `--spending-file` is
+provided, the monthly command first opens visible Revolut for manual sign-in,
+captures the requested month's category breakdown to
+`output/spending-YYYY-MM.html`, then reads the sheet, fetches prices and rates,
+and writes the validated updates in one batch. Use `--spending-file` to process
+another local HTML file without opening a browser.
 
 ```sh
 npm start -- 2026-09 --sheet-id SPREADSHEET_ID
@@ -68,6 +71,8 @@ from the working directory's `.env`; that ID must identify the spreadsheet for
 the requested year. The monthly workflow reads the `MM` tab, analyzes its
 tables, extracts the saved Revolut categories, fetches prices and exchange
 rates, validates the complete result, and writes all output cells in one batch.
+Browser capture requires manual authentication and saves only the category
+container; pass `--spending-file` to skip capture and use existing local HTML.
 
 ## Call a module independently
 
@@ -93,8 +98,9 @@ For `fill-spendings`, use the ID for the spreadsheet containing the year in
 
 The categories command prints JSON or CSV by default. Use `--output FILE` to
 write that format to a file instead; the destination directory must exist.
-`browser-login` opens visible Chromium only after explicit invocation and
-requires manual sign-in. It saves only the spending category container; never
+`browser-login` opens visible Chromium when explicitly invoked. The root
+monthly command also runs this flow when `--spending-file` is omitted. Capture
+requires manual sign-in and saves only the spending category container; never
 commit account exports, saved spending HTML, sheet contents, credentials, or
 authentication state.
 

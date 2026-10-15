@@ -38,9 +38,12 @@ function usage(): string {
   rmz-budgeting-tools revolut <command> [options]
 
 The monthly workflow defaults to the previous month and reads
-output/spending-YYYY-MM.html. The sheet ID comes from --sheet-id or
-GOOGLE_SHEETS_SPREADSHEET_ID in the current directory's .env; it identifies the
-spreadsheet for that year, and the month selects the two-digit MM tab.
+output/spending-YYYY-MM.html. Without --spending-file, it first opens visible
+Revolut for manual sign-in and saves the requested month's category breakdown.
+Use --spending-file to process saved HTML without opening a browser. The sheet
+ID comes from --sheet-id or GOOGLE_SHEETS_SPREADSHEET_ID in the current
+directory's .env; it identifies the spreadsheet for that year.
+The month selects the two-digit MM tab.
 The tab must contain the documented spending, ticker, and currency tables.
 `;
 }
@@ -48,6 +51,12 @@ The tab must contain the documented spending, ticker, and currency tables.
 function previousMonth(date: Date): string {
   const previous = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, 1));
   return `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function browserLoginMonth(yearMonth: string): string {
+  const monthName = new Date(`${yearMonth}-01T00:00:00.000Z`)
+    .toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+  return `${yearMonth.slice(0, 4)}-${monthName}`;
 }
 
 export function parseArguments(
@@ -109,6 +118,13 @@ export async function run(
       workingDirectory,
       false,
     );
+    if (parsed.spendingFile === undefined) {
+      const captureResult = await (dependencies.runRevolut ?? runRevolut)([
+        "browser-login",
+        browserLoginMonth(parsed.yearMonth),
+      ]);
+      if (captureResult !== "") writeStdout(`${captureResult}\n`);
+    }
     const result = await (dependencies.runMonthlyWorkflow ?? runMonthlyWorkflow)(
       {
         yearMonth: parsed.yearMonth,

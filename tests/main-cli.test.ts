@@ -63,11 +63,16 @@ test("APP-001: resolves the sheet ID from the working directory .env file", asyn
   const originalSpreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
   delete process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
   const monthlyCalls: Array<{ yearMonth: string; spreadsheetId: string; spendingFile?: string }> = [];
+  const revolutCalls: string[][] = [];
   const output: string[] = [];
   try {
     await writeFile(join(directory, ".env"), "GOOGLE_SHEETS_SPREADSHEET_ID=sheet-from-env\n");
     await cliModule.run(["2026-09"], {
       workingDirectory: directory,
+      runRevolut: async (args: readonly string[]) => {
+        revolutCalls.push([...args]);
+        return "";
+      },
       runMonthlyWorkflow: async (options) => {
         monthlyCalls.push(options);
         return { yearMonth: options.yearMonth, asOfDate: "2026-09-30", updatedCells: 7 };
@@ -88,7 +93,55 @@ test("APP-001: resolves the sheet ID from the working directory .env file", asyn
     spreadsheetId: "sheet-from-env",
     spendingFile: undefined,
   }]);
+  assert.deepEqual(revolutCalls, [["browser-login", "2026-Sep"]]);
   assert.match(output[0] ?? "", /"updatedCells": 7/);
+});
+
+test("APP-002 SPEND-006: monthly CLI captures the requested Revolut month before updating the sheet", async () => {
+  assert.ok(cliModule, "the root CLI module must be available");
+  const calls: string[] = [];
+  const output: string[] = [];
+
+  await cliModule.run(["2026-09", "--sheet-id", "sheet-123"], {
+    runRevolut: async (args: readonly string[]) => {
+      calls.push(`revolut:${args.join(" ")}`);
+      return "Browser session closed.";
+    },
+    runMonthlyWorkflow: async (options) => {
+      calls.push(`monthly:${options.yearMonth}:${options.spreadsheetId}:${options.spendingFile ?? "default"}`);
+      return { yearMonth: options.yearMonth, asOfDate: "2026-09-30", updatedCells: 7 };
+    },
+    writeStdout: (value: string) => output.push(value),
+  });
+
+  assert.deepEqual(calls, [
+    "revolut:browser-login 2026-Sep",
+    "monthly:2026-09:sheet-123:default",
+  ]);
+  assert.equal(output[0], "Browser session closed.\n");
+  assert.match(output[1] ?? "", /"updatedCells": 7/);
+});
+
+test("APP-002 SPEND-006: an explicit spending file skips browser capture", async () => {
+  assert.ok(cliModule, "the root CLI module must be available");
+  const calls: string[] = [];
+
+  await cliModule.run(
+    ["2026-09", "--sheet-id", "sheet-123", "--spending-file", "spending.html"],
+    {
+      runRevolut: async () => {
+        calls.push("capture");
+        return "";
+      },
+      runMonthlyWorkflow: async (options) => {
+        calls.push(`monthly:${options.spendingFile}`);
+        return { yearMonth: options.yearMonth, asOfDate: "2026-09-30", updatedCells: 7 };
+      },
+      writeStdout: () => {},
+    },
+  );
+
+  assert.deepEqual(calls, ["monthly:spending.html"]);
 });
 
 test("APP-003: invokes the routed tools through their module CLIs", async () => {
