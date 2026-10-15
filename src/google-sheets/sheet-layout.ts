@@ -25,7 +25,7 @@ interface TableDefinition {
 const TABLES = {
   spending: {
     label: "spending",
-    headers: ["Budget Category", "Revolut Spend (RON)"],
+    headers: ["Kategória", "RON (N)", "RON (ZS)"],
   },
   prices: {
     label: "share-price",

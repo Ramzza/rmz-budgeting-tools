@@ -4,13 +4,16 @@ import test from "node:test";
 const workflowModule = await import("../src/monthly-workflow.js").catch(() => undefined);
 const layoutModule = await import("../src/google-sheets/sheet-layout.js").catch(() => undefined);
 
-const sheetValues = [
-  ["Budget Category", "Revolut Spend (RON)", null, null, "Ticker", "Share Price", "Price Currency", "Price Date", null, "Currency", "RON per Unit", "Rate Date"],
-  ["Groceries", null, null, null, "AAPL", null, null, null, null, "EUR", null, null],
-  ["Transport", null, null, null, null, null, null, null, null, null, null, null],
-];
+const sheetValues = Array.from({ length: 44 }, () => [] as (string | number | boolean | null)[]);
+sheetValues[0] = ["Ticker", "Share Price", "Price Currency", "Price Date"];
+sheetValues[1] = ["AAPL", null, null, null];
+sheetValues[3] = ["Currency", "RON per Unit", "Rate Date"];
+sheetValues[4] = ["EUR", null, null];
+sheetValues[41] = ["Kategória", null, "RON (N)", "RON (ZS)"];
+sheetValues[42] = ["Groceries", null, null, null];
+sheetValues[43] = ["Transport", null, null, null];
 
-test("APP-002: validates the full month and batches discovered spending, price, and rate cells", async () => {
+test("APP-002: fills the RON (ZS) profile and batches discovered spending, price, and rate cells", async () => {
   assert.ok(workflowModule, "the monthly workflow module must be available");
   const writes: Array<{ range: string; values: unknown[][] }> = [];
   const requestedPrices: string[] = [];
@@ -53,13 +56,13 @@ test("APP-002: validates the full month and batches discovered spending, price, 
   assert.deepEqual(requestedPrices, ["AAPL:2026-09-30"]);
   assert.deepEqual(requestedCurrencies, [["EUR"]]);
   assert.deepEqual(writes, [
-    { range: "'09'!B2", values: [[75]] },
-    { range: "'09'!B3", values: [[0]] },
-    { range: "'09'!F2", values: [[191.5]] },
-    { range: "'09'!G2", values: [["USD"]] },
-    { range: "'09'!H2", values: [["2026-09-30"]] },
-    { range: "'09'!K2", values: [[5.08]] },
-    { range: "'09'!L2", values: [["2026-09-30"]] },
+    { range: "'09'!D43", values: [[75]] },
+    { range: "'09'!D44", values: [[0]] },
+    { range: "'09'!B2", values: [[191.5]] },
+    { range: "'09'!C2", values: [["USD"]] },
+    { range: "'09'!D2", values: [["2026-09-30"]] },
+    { range: "'09'!B5", values: [[5.08]] },
+    { range: "'09'!C5", values: [["2026-09-30"]] },
   ]);
   assert.deepEqual(result, {
     yearMonth: "2026-09",
@@ -109,12 +112,12 @@ test("APP-002: buildMonthlyUpdates targets the two-digit tab in the yearly sprea
   );
 
   assert.deepEqual(updates.map(({ range }) => range), [
+    "'01'!D43",
+    "'01'!D44",
     "'01'!B2",
-    "'01'!B3",
-    "'01'!F2",
-    "'01'!G2",
-    "'01'!H2",
-    "'01'!K2",
-    "'01'!L2",
+    "'01'!C2",
+    "'01'!D2",
+    "'01'!B5",
+    "'01'!C5",
   ]);
 });

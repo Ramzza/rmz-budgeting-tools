@@ -7,6 +7,8 @@ import { parseDate } from "./market-data/dates.js";
 import { fetchLatestStockPriceData, type PriceQuote } from "./market-data/prices.js";
 import { getMonthTabName, validateYearMonth } from "./google-sheets/spendings.js";
 
+const ZS_SPENDING_OUTPUT_INDEX = 1;
+
 export interface MonthlyWorkflowOptions {
   yearMonth: string;
   spreadsheetId: string;
@@ -84,7 +86,11 @@ function spendingUpdates(
     const amount = totals.get(normalized) ?? 0;
     if (totals.has(normalized)) matched.add(normalized);
     return {
-      range: sheetCellRange(sheetTab, row, table.outputColumns[0]!),
+      range: sheetCellRange(
+        sheetTab,
+        row,
+        table.outputColumns[ZS_SPENDING_OUTPUT_INDEX]!,
+      ),
       values: [[amount]],
     };
   });

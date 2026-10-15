@@ -27,15 +27,16 @@ Keep a separate spreadsheet for each year, with worksheet tabs named exactly
 the supplied spreadsheet ID and selects the corresponding two-digit `MM` tab.
 The CLI scans columns `A:ZZ` of that tab for one table of each type below.
 Header text is matched case-insensitively after trimming whitespace, and the
-tables may be placed anywhere in that range.
+tables may be placed anywhere in that range. The current category header is on
+row 42, with category names in `A43:A70`; column B is intentionally blank.
 Put input keys in the first column shown; rows continue until the first blank
 key cell. The remaining columns are CLI outputs and must stay in the shown
 order.
 
-| Budget Category | Revolut Spend (RON) |
-| --- | ---: |
-| Groceries | |
-| Transport | |
+| Kategória |  | RON (N) | RON (ZS) |
+| --- | --- | ---: | ---: |
+| Groceries | | | |
+| Transport | | | |
 
 | Ticker | Share Price | Price Currency | Price Date |
 | --- | ---: | --- | --- |
@@ -50,7 +51,9 @@ The spending categories must match the saved Revolut breakdown. Tickers and
 currency codes are inputs; prices and rates use the latest available source
 date on or before the month's last calendar day. The RON rate is always 1.
 Missing or ambiguous tables, unknown spending categories, or unavailable data
-stop the workflow before any cells are written.
+stop the workflow before any cells are written. The monthly workflow writes
+spending totals to `RON (ZS)` in column D; the standalone Sheets command can
+write to the N profile with `--profile N`.
 
 ## Monthly workflow
 
