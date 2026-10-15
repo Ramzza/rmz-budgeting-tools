@@ -97,7 +97,7 @@ test("APP-001: resolves the sheet ID from the working directory .env file", asyn
   assert.match(output[0] ?? "", /"updatedCells": 7/);
 });
 
-test("APP-002 SPEND-006: monthly CLI captures the requested Revolut month before updating the sheet", async () => {
+test("APP-002: SPEND-006: monthly CLI captures the requested Revolut month before updating the sheet", async () => {
   assert.ok(cliModule, "the root CLI module must be available");
   const calls: string[] = [];
   const output: string[] = [];
@@ -122,7 +122,7 @@ test("APP-002 SPEND-006: monthly CLI captures the requested Revolut month before
   assert.match(output[1] ?? "", /"updatedCells": 7/);
 });
 
-test("APP-002 SPEND-006: an explicit spending file skips browser capture", async () => {
+test("APP-002: SPEND-006: an explicit spending file skips browser capture", async () => {
   assert.ok(cliModule, "the root CLI module must be available");
   const calls: string[] = [];
 
