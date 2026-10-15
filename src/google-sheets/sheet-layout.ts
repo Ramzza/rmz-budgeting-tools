@@ -25,7 +25,7 @@ interface TableDefinition {
 const TABLES = {
   spending: {
     label: "spending",
-    headers: ["Budget Category", "Revolut Spend (RON)"],
+    headers: ["Kategória", "RON (N)", "RON (ZS)"],
   },
   prices: {
     label: "share-price",
@@ -101,10 +101,77 @@ function findTable(
   return { keyColumn, outputColumns, rows };
 }
 
+function hasMarketTableHeaders(values: Values): boolean {
+  const headers = [...TABLES.prices.headers, ...TABLES.exchangeRates.headers]
+    .map(normalizeHeader);
+  return values.some((row) => row.some((cell) => headers.includes(normalizeHeader(cell))));
+}
+
+function hasCompleteTableHeaders(values: Values, definition: TableDefinition): boolean {
+  return values.some((row) => {
+    const normalizedCells = row.map(normalizeHeader);
+    return definition.headers.every(
+      (header) => normalizedCells.filter((cell) => cell === normalizeHeader(header)).length === 1,
+    );
+  });
+}
+
+function hasPositionedMarketInputs(values: Values): boolean {
+  const hasInput = (column: number, firstRow: number, lastRow: number): boolean => {
+    for (let row = firstRow; row <= lastRow; row += 1) {
+      const cell = values[row - 1]?.[column];
+      if (cell !== undefined && cell !== null && cell !== "") return true;
+    }
+    return false;
+  };
+  return hasInput(1, 16, 18) || hasInput(5, 16, 30);
+}
+
+function findPositionedTable(
+  values: Values,
+  label: string,
+  keyColumn: number,
+  firstRow: number,
+  lastRow: number,
+  outputColumns: number[],
+): MonthlySheetTable {
+  const rows: MonthlySheetRow[] = [];
+  const seenKeys = new Set<string>();
+  for (let row = firstRow; row <= lastRow; row += 1) {
+    const cell = values[row - 1]?.[keyColumn];
+    if (cell === undefined || cell === null || cell === "") break;
+    if (typeof cell !== "string" || cell.trim() === "") {
+      throw new Error(`monthly sheet ${label} key in row ${row} must be non-empty text`);
+    }
+    const key = cell.trim();
+    const normalizedKey = key.toLocaleLowerCase("en-US");
+    if (seenKeys.has(normalizedKey)) {
+      throw new Error(`monthly sheet ${label} table contains duplicate key "${key}"`);
+    }
+    seenKeys.add(normalizedKey);
+    rows.push({ key, row });
+  }
+
+  return { keyColumn, outputColumns, rows };
+}
+
 export function analyzeMonthlySheet(values: Values): MonthlySheetLayout {
+  const hasHeaderLayout =
+    hasCompleteTableHeaders(values, TABLES.prices) &&
+    hasCompleteTableHeaders(values, TABLES.exchangeRates);
+  const marketTables = hasHeaderLayout ||
+      (hasMarketTableHeaders(values) && !hasPositionedMarketInputs(values))
+    ? {
+        prices: findTable(values, TABLES.prices),
+        exchangeRates: findTable(values, TABLES.exchangeRates),
+      }
+    : {
+        prices: findPositionedTable(values, "share-price", 5, 16, 30, [6]),
+        exchangeRates: findPositionedTable(values, "exchange-rate", 1, 16, 18, [2]),
+      };
+
   return {
     spending: findTable(values, TABLES.spending),
-    prices: findTable(values, TABLES.prices),
-    exchangeRates: findTable(values, TABLES.exchangeRates),
+    ...marketTables,
   };
 }

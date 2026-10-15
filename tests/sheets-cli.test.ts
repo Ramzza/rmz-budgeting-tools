@@ -32,6 +32,7 @@ test("SHEETS-004: help documents the monthly category spending command", () => {
   const result = runCli(["--help"]);
   assert.equal(result.status, 0);
   assert.match(result.stdout, /fill-spendings YYYY-MM --spending-input/);
+  assert.match(result.stdout, /YYYY-MM selects the MM tab in the spreadsheet for that year/);
 });
 
 test("SHEETS-004: rejects an invalid month before resolving Google credentials", () => {
@@ -212,11 +213,11 @@ test("SHEETS-004: runs the fill command with the requested profile and spreadshe
   );
 
   assert.deepEqual(calls.map(({ method, spreadsheetId, range }) => ({ method, spreadsheetId, range })), [
-    { method: "get", spreadsheetId: "spreadsheet-1", range: "'2026-09'!A43:A70" },
-    { method: "update", spreadsheetId: "spreadsheet-1", range: "'2026-09'!C43:C70" },
+    { method: "get", spreadsheetId: "spreadsheet-1", range: "'09'!A43:A70" },
+    { method: "update", spreadsheetId: "spreadsheet-1", range: "'09'!C43:C70" },
   ]);
   assert.deepEqual(JSON.parse(output[0] ?? ""), {
-    updatedRange: "'2026-09'!C43:C70",
+    updatedRange: "'09'!C43:C70",
     updatedRows: 28,
   });
 });

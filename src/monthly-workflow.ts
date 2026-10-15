@@ -5,7 +5,15 @@ import { parseCategoryBreakdownHtml, type CategorySpend } from "./revolut-spendi
 import { fetchLatestExchangeRates, type ExchangeRate } from "./market-data/bnr.js";
 import { parseDate } from "./market-data/dates.js";
 import { fetchLatestStockPriceData, type PriceQuote } from "./market-data/prices.js";
-import { validateYearMonth } from "./google-sheets/spendings.js";
+import { getMonthTabName, validateYearMonth } from "./google-sheets/spendings.js";
+
+const ZS_SPENDING_OUTPUT_INDEX = 1;
+
+const TICKER_CURRENCIES: Readonly<Record<string, string>> = {
+  "DE.EUNL": "EUR",
+  TVBETETF: "RON",
+  "DE.SXR8": "EUR",
+};
 
 export interface MonthlyWorkflowOptions {
   yearMonth: string;
@@ -14,7 +22,6 @@ export interface MonthlyWorkflowOptions {
 }
 
 export interface MonthlyPrice {
-  currency: string;
   quote: PriceQuote;
 }
 
@@ -41,6 +48,10 @@ function normalizeKey(value: string): string {
   return value.trim().toLocaleUpperCase("en-US");
 }
 
+function priceCurrency(symbol: string): string {
+  return TICKER_CURRENCIES[normalizeKey(symbol)] ?? "USD";
+}
+
 function columnName(columnIndex: number): string {
   let remainder = columnIndex + 1;
   let name = "";
@@ -52,13 +63,13 @@ function columnName(columnIndex: number): string {
   return name;
 }
 
-function sheetCellRange(yearMonth: string, row: number, column: number): string {
-  const quotedSheet = yearMonth.replaceAll("'", "''");
+function sheetCellRange(sheetTab: string, row: number, column: number): string {
+  const quotedSheet = sheetTab.replaceAll("'", "''");
   return `'${quotedSheet}'!${columnName(column)}${row}`;
 }
 
 function spendingUpdates(
-  yearMonth: string,
+  sheetTab: string,
   table: MonthlySheetTable,
   spendings: readonly CategorySpend[],
 ): ValueUpdate[] {
@@ -84,7 +95,11 @@ function spendingUpdates(
     const amount = totals.get(normalized) ?? 0;
     if (totals.has(normalized)) matched.add(normalized);
     return {
-      range: sheetCellRange(yearMonth, row, table.outputColumns[0]!),
+      range: sheetCellRange(
+        sheetTab,
+        row,
+        table.outputColumns[ZS_SPENDING_OUTPUT_INDEX]!,
+      ),
       values: [[amount]],
     };
   });
@@ -107,7 +122,7 @@ function requireDateOnOrBefore(value: string, endDate: string, label: string): v
 }
 
 function marketDataUpdates(
-  yearMonth: string,
+  sheetTab: string,
   endDate: string,
   layout: MonthlySheetLayout,
   prices: readonly MonthlyPrice[],
@@ -128,14 +143,14 @@ function marketDataUpdates(
     if (!price) {
       throw new Error(`no share price was returned for ${item.key}`);
     }
-    if (!price.currency.trim() || price.quote.close === null || !Number.isFinite(price.quote.close)) {
+    if (price.quote.close === null || !Number.isFinite(price.quote.close)) {
       throw new Error(`no finite share price was returned for ${item.key}`);
     }
     requireDateOnOrBefore(price.quote.date, endDate, `share price date for ${item.key}`);
-    const values = [price.quote.close, price.currency.trim().toUpperCase(), price.quote.date];
+    const values = [price.quote.close, priceCurrency(item.key), price.quote.date];
     layout.prices.outputColumns.forEach((column, index) => {
       updates.push({
-        range: sheetCellRange(yearMonth, item.row, column),
+        range: sheetCellRange(sheetTab, item.row, column),
         values: [[values[index] as string | number]],
       });
     });
@@ -153,7 +168,7 @@ function marketDataUpdates(
     const values = [rate.ronPerUnit, rate.date];
     layout.exchangeRates.outputColumns.forEach((column, index) => {
       updates.push({
-        range: sheetCellRange(yearMonth, item.row, column),
+        range: sheetCellRange(sheetTab, item.row, column),
         values: [[values[index] as string | number]],
       });
     });
@@ -169,8 +184,9 @@ export function buildMonthlyUpdates(
   rates: readonly ExchangeRate[],
 ): ValueUpdate[] {
   const month = validateYearMonth(yearMonth);
-  const updates = spendingUpdates(month, layout.spending, spendings);
-  updates.push(...marketDataUpdates(month, monthEndDate(month), layout, prices, rates));
+  const sheetTab = getMonthTabName(month);
+  const updates = spendingUpdates(sheetTab, layout.spending, spendings);
+  updates.push(...marketDataUpdates(sheetTab, monthEndDate(month), layout, prices, rates));
   return updates;
 }
 
@@ -184,7 +200,7 @@ async function createDefaultDependencies(): Promise<MonthlyWorkflowDependencies>
       if (!data.quote) {
         throw new Error(`no closing price was found for ${symbol} on or before ${endDate}`);
       }
-      return { currency: data.currency, quote: data.quote };
+      return { quote: data.quote };
     },
     fetchExchangeRates: (currencies, endDate) =>
       fetchLatestExchangeRates(parseDate(endDate), currencies),
@@ -199,29 +215,33 @@ export async function runMonthlyWorkflow(
   dependencies?: MonthlyWorkflowDependencies,
 ): Promise<MonthlyWorkflowResult> {
   const yearMonth = validateYearMonth(options.yearMonth);
+  const sheetTab = getMonthTabName(yearMonth);
   const spreadsheetId = options.spreadsheetId.trim();
   if (!spreadsheetId) throw new Error("Spreadsheet ID is required.");
   const endDate = monthEndDate(yearMonth);
   const activeDependencies = dependencies ?? await createDefaultDependencies();
-  const range = `'${yearMonth}'!A:ZZ`;
+  const range = `'${sheetTab}'!A:ZZ`;
   const sheetValues = await activeDependencies.readSheet(spreadsheetId, range);
   const layout = analyzeMonthlySheet(sheetValues);
   const spendingFile = options.spendingFile ?? `output/spending-${yearMonth}.html`;
   const spendings = parseCategoryBreakdownHtml(
     await activeDependencies.readSpendingHtml(spendingFile),
   );
-  const expenseUpdates = spendingUpdates(yearMonth, layout.spending, spendings);
+  const expenseUpdates = spendingUpdates(sheetTab, layout.spending, spendings);
 
   const prices = await Promise.all(
     layout.prices.rows.map(({ key }) => activeDependencies.fetchPrice(key, endDate)),
   );
-  const currencies = layout.exchangeRates.rows.map(({ key }) => key);
+  const currencies = [...new Set([
+    ...layout.exchangeRates.rows.map(({ key }) => normalizeKey(key)),
+    ...layout.prices.rows.map(({ key }) => priceCurrency(key)),
+  ])];
   const rates = currencies.length > 0
     ? await activeDependencies.fetchExchangeRates(currencies, endDate)
     : [];
   const updates = [
     ...expenseUpdates,
-    ...marketDataUpdates(yearMonth, endDate, layout, prices, rates),
+    ...marketDataUpdates(sheetTab, endDate, layout, prices, rates),
   ];
   if (updates.length > 0) {
     await activeDependencies.writeUpdates(spreadsheetId, updates);

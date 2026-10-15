@@ -15,45 +15,50 @@ npm run build
 npm test
 ```
 
-Copy `.env.example` to `.env` and set `GOOGLE_SHEETS_SPREADSHEET_ID`, or pass a
-sheet ID on the command line. Configure Google Application Default Credentials
-outside this repository; the CLI does not save credentials.
+Copy `.env.example` to `.env` and set `GOOGLE_SHEETS_SPREADSHEET_ID` to the
+spreadsheet for the year being processed, or pass that year's sheet ID on the
+command line. Configure Google Application Default Credentials outside this
+repository; the CLI does not save credentials.
 
 ## Monthly sheet convention
 
-Create one worksheet tab per month named exactly `YYYY-MM`. The CLI scans the
-columns `A:ZZ` of the tab for one table of each type below. Header text is
-matched case-insensitively after trimming whitespace, and the tables may be
-placed anywhere in that range.
-Put input keys in the first column shown; rows continue until the first blank
-key cell. The remaining columns are CLI outputs and must stay in the shown
-order.
+Keep a separate spreadsheet for each year, with worksheet tabs named exactly
+`01` through `12`. The `YYYY-MM` month argument identifies the year through
+the supplied spreadsheet ID and selects the corresponding two-digit `MM` tab.
+The CLI scans columns `A:ZZ` of that tab. It discovers the spending table by
+its headers; the current category header is on row 42, with category names in
+`A43:A70`, and outputs in columns C (`RON (N)`) and D (`RON (ZS)`). Column B is
+intentionally blank.
 
-| Budget Category | Revolut Spend (RON) |
-| --- | ---: |
-| Groceries | |
-| Transport | |
+| Kategória |  | RON (N) | RON (ZS) |
+| --- | --- | ---: | ---: |
+| Groceries | | | |
+| Transport | | | |
 
-| Ticker | Share Price | Price Currency | Price Date |
-| --- | ---: | --- | --- |
-| AAPL | | | |
+The current market-data layout uses fixed positions:
 
-| Currency | RON per Unit | Rate Date |
-| --- | ---: | --- |
-| EUR | | |
-| USD | | |
+| Data | Input cells | Output cells |
+| --- | --- | --- |
+| Currency codes (EUR, USD, HUF) | `B16:B18` | RON-per-unit rates in `C16:C18` |
+| Tickers | `F16:F30` | Closing prices in `G16:G30` |
 
-The spending categories must match the saved Revolut breakdown. Tickers and
-currency codes are inputs; prices and rates use the latest available source
-date on or before the month's last calendar day. The RON rate is always 1.
-Missing or ambiguous tables, unknown spending categories, or unavailable data
-stop the workflow before any cells are written.
+Rows continue until the first blank key cell. The workflow also supports
+existing workbooks using the prior header-based market tables. `DE.EUNL` and
+`DE.SXR8` are EUR tickers, `TVBETETF` is RON, and other tickers are treated as
+USD. Prices and rates use the latest available source date on or before the
+month's last calendar day; the RON rate is always 1. Unknown spending
+categories or unavailable data stop the workflow before any cells are
+written. Spending totals go to `RON (ZS)` in column D; the standalone Sheets
+command can write to the N profile with `--profile N`.
 
 ## Monthly workflow
 
-The default month is the previous calendar month. By default, spending is read
-from `output/spending-YYYY-MM.html`; use `--spending-file` to choose another
-local HTML file. Browser capture is always a separate explicit command.
+The default month is the previous calendar month. Unless `--spending-file` is
+provided, the monthly command first opens visible Revolut for manual sign-in,
+captures the requested month's category breakdown to
+`output/spending-YYYY-MM.html`, then reads the sheet, fetches prices and rates,
+and writes the validated updates in one batch. Use `--spending-file` to process
+another local HTML file without opening a browser.
 
 ```sh
 npm start -- 2026-09 --sheet-id SPREADSHEET_ID
@@ -62,10 +67,12 @@ npm start -- 2026-09 --spending-file ./spending.html
 ```
 
 When `--sheet-id` is omitted, the CLI reads `GOOGLE_SHEETS_SPREADSHEET_ID`
-from the working directory's `.env`. The monthly workflow reads the target
-sheet tab, analyzes its tables, extracts the saved Revolut categories, fetches
-prices and exchange rates, validates the complete result, and writes all
-output cells in one batch.
+from the working directory's `.env`; that ID must identify the spreadsheet for
+the requested year. The monthly workflow reads the `MM` tab, analyzes its
+tables, extracts the saved Revolut categories, fetches prices and exchange
+rates, validates the complete result, and writes all output cells in one batch.
+Browser capture requires manual authentication and saves only the category
+container; pass `--spending-file` to skip capture and use existing local HTML.
 
 ## Call a module independently
 
@@ -86,10 +93,14 @@ npm start -- revolut categories ./output/spending-2026-09.html --output ./catego
 npm start -- revolut browser-login last
 ```
 
+For `fill-spendings`, use the ID for the spreadsheet containing the year in
+`YYYY-MM`; the command targets the corresponding `MM` tab.
+
 The categories command prints JSON or CSV by default. Use `--output FILE` to
 write that format to a file instead; the destination directory must exist.
-`browser-login` opens visible Chromium only after explicit invocation and
-requires manual sign-in. It saves only the spending category container; never
+`browser-login` opens visible Chromium when explicitly invoked. The root
+monthly command also runs this flow when `--spending-file` is omitted. Capture
+requires manual sign-in and saves only the spending category container; never
 commit account exports, saved spending HTML, sheet contents, credentials, or
 authentication state.
 
