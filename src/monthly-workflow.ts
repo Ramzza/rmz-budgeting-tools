@@ -9,6 +9,12 @@ import { getMonthTabName, validateYearMonth } from "./google-sheets/spendings.js
 
 const ZS_SPENDING_OUTPUT_INDEX = 1;
 
+const TICKER_CURRENCIES: Readonly<Record<string, string>> = {
+  "DE.EUNL": "EUR",
+  TVBETETF: "RON",
+  "DE.SXR8": "EUR",
+};
+
 export interface MonthlyWorkflowOptions {
   yearMonth: string;
   spreadsheetId: string;
@@ -16,7 +22,6 @@ export interface MonthlyWorkflowOptions {
 }
 
 export interface MonthlyPrice {
-  currency: string;
   quote: PriceQuote;
 }
 
@@ -41,6 +46,10 @@ function monthEndDate(yearMonth: string): string {
 
 function normalizeKey(value: string): string {
   return value.trim().toLocaleUpperCase("en-US");
+}
+
+function priceCurrency(symbol: string): string {
+  return TICKER_CURRENCIES[normalizeKey(symbol)] ?? "USD";
 }
 
 function columnName(columnIndex: number): string {
@@ -134,11 +143,11 @@ function marketDataUpdates(
     if (!price) {
       throw new Error(`no share price was returned for ${item.key}`);
     }
-    if (!price.currency.trim() || price.quote.close === null || !Number.isFinite(price.quote.close)) {
+    if (price.quote.close === null || !Number.isFinite(price.quote.close)) {
       throw new Error(`no finite share price was returned for ${item.key}`);
     }
     requireDateOnOrBefore(price.quote.date, endDate, `share price date for ${item.key}`);
-    const values = [price.quote.close, price.currency.trim().toUpperCase(), price.quote.date];
+    const values = [price.quote.close, priceCurrency(item.key), price.quote.date];
     layout.prices.outputColumns.forEach((column, index) => {
       updates.push({
         range: sheetCellRange(sheetTab, item.row, column),
@@ -191,7 +200,7 @@ async function createDefaultDependencies(): Promise<MonthlyWorkflowDependencies>
       if (!data.quote) {
         throw new Error(`no closing price was found for ${symbol} on or before ${endDate}`);
       }
-      return { currency: data.currency, quote: data.quote };
+      return { quote: data.quote };
     },
     fetchExchangeRates: (currencies, endDate) =>
       fetchLatestExchangeRates(parseDate(endDate), currencies),
@@ -223,7 +232,10 @@ export async function runMonthlyWorkflow(
   const prices = await Promise.all(
     layout.prices.rows.map(({ key }) => activeDependencies.fetchPrice(key, endDate)),
   );
-  const currencies = layout.exchangeRates.rows.map(({ key }) => key);
+  const currencies = [...new Set([
+    ...layout.exchangeRates.rows.map(({ key }) => normalizeKey(key)),
+    ...layout.prices.rows.map(({ key }) => priceCurrency(key)),
+  ])];
   const rates = currencies.length > 0
     ? await activeDependencies.fetchExchangeRates(currencies, endDate)
     : [];

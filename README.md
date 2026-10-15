@@ -25,35 +25,31 @@ repository; the CLI does not save credentials.
 Keep a separate spreadsheet for each year, with worksheet tabs named exactly
 `01` through `12`. The `YYYY-MM` month argument identifies the year through
 the supplied spreadsheet ID and selects the corresponding two-digit `MM` tab.
-The CLI scans columns `A:ZZ` of that tab for one table of each type below.
-Header text is matched case-insensitively after trimming whitespace, and the
-tables may be placed anywhere in that range. The current category header is on
-row 42, with category names in `A43:A70`; column B is intentionally blank.
-Put input keys in the first column shown; rows continue until the first blank
-key cell. The remaining columns are CLI outputs and must stay in the shown
-order.
+The CLI scans columns `A:ZZ` of that tab. It discovers the spending table by
+its headers; the current category header is on row 42, with category names in
+`A43:A70`, and outputs in columns C (`RON (N)`) and D (`RON (ZS)`). Column B is
+intentionally blank.
 
 | Kategória |  | RON (N) | RON (ZS) |
 | --- | --- | ---: | ---: |
 | Groceries | | | |
 | Transport | | | |
 
-| Ticker | Share Price | Price Currency | Price Date |
-| --- | ---: | --- | --- |
-| AAPL | | | |
+The current market-data layout uses fixed positions:
 
-| Currency | RON per Unit | Rate Date |
-| --- | ---: | --- |
-| EUR | | |
-| USD | | |
+| Data | Input cells | Output cells |
+| --- | --- | --- |
+| Currency codes (EUR, USD, HUF) | `B16:B18` | RON-per-unit rates in `C16:C18` |
+| Tickers | `F16:F30` | Closing prices in `G16:G30` |
 
-The spending categories must match the saved Revolut breakdown. Tickers and
-currency codes are inputs; prices and rates use the latest available source
-date on or before the month's last calendar day. The RON rate is always 1.
-Missing or ambiguous tables, unknown spending categories, or unavailable data
-stop the workflow before any cells are written. The monthly workflow writes
-spending totals to `RON (ZS)` in column D; the standalone Sheets command can
-write to the N profile with `--profile N`.
+Rows continue until the first blank key cell. The workflow also supports
+existing workbooks using the prior header-based market tables. `DE.EUNL` and
+`DE.SXR8` are EUR tickers, `TVBETETF` is RON, and other tickers are treated as
+USD. Prices and rates use the latest available source date on or before the
+month's last calendar day; the RON rate is always 1. Unknown spending
+categories or unavailable data stop the workflow before any cells are
+written. Spending totals go to `RON (ZS)` in column D; the standalone Sheets
+command can write to the N profile with `--profile N`.
 
 ## Monthly workflow
 

@@ -13,7 +13,7 @@ three domain modules do not have separate project setup or package manifests.
   historical price and rate lookups, and one batch write. It validates the
   complete update set before writing.
 - `src/google-sheets/` owns the Sheets API adapter, its module CLI, monthly
-  category input logic, and header-driven sheet layout analysis.
+  category input logic, and monthly sheet layout analysis.
 - `src/market-data/` owns Yahoo Finance and CursBNR providers, date handling,
   errors, and the independently callable market-data CLI.
 - `src/revolut-spending/` owns local CSV and saved-HTML parsing, the explicit
@@ -27,13 +27,14 @@ three domain modules do not have separate project setup or package manifests.
 Each year has a separate spreadsheet with worksheet tabs named `01` through
 `12`. The requested `YYYY-MM` identifies the year-specific spreadsheet through
 the supplied spreadsheet ID and selects the corresponding `MM` tab. The
-workflow reads `A:ZZ` and discovers three tables by the exact trimmed,
-case-insensitive headers documented in [README.md](README.md): spending
-categories, tickers, and currencies. Spending categories use the `Kategória`
-key, with profile outputs `RON (N)` and `RON (ZS)`; the monthly workflow writes
-to the ZS column. For each table, input rows start immediately after its
-header and stop at the first blank key. The table output columns are the only
-cells the workflow changes.
+workflow reads `A:ZZ` and discovers the spending table by the exact trimmed,
+case-insensitive headers documented in [README.md](README.md). Current market
+inputs use the positional ranges `B16:B18` for
+currencies and `F16:F30` for tickers, with rates written to `C16:C18` and
+closing prices to `G16:G30`. Existing header-based market tables remain
+supported. Spending categories use the `Kategória` key, with profile outputs
+`RON (N)` and `RON (ZS)`; the monthly workflow writes to the ZS column. Inputs
+stop at the first blank key, and only associated output cells are changed.
 
 The source date is the last calendar day of the selected month. Yahoo Finance
 and CursBNR data use the latest available date on or before that date. The

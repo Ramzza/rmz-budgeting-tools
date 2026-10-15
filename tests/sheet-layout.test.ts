@@ -39,6 +39,60 @@ test("SHEETS-005: discovers the current category profiles and market tables by t
   });
 });
 
+test("SHEETS-005: discovers market inputs and outputs in the current positional layout", () => {
+  assert.ok(layoutModule, "the monthly sheet layout analyzer must be available");
+
+  const values: Values = Array.from({ length: 70 }, () => []);
+  values[14] = [null, "Currency", null, null, null, "Ticker"];
+  values[15] = [null, "EUR", null, null, null, "DE.EUNL", null];
+  values[16] = [null, "USD", null, null, null, "TVBETETF", null];
+  values[17] = [null, "HUF", null, null, null, "DE.SXR8", null];
+  values[18] = [null, null, null, null, null, "AAPL", null];
+  values[41] = ["Kategória", null, "RON (N)", "RON (ZS)"];
+  values[42] = ["Groceries", null, null, null];
+
+  const layout = layoutModule.analyzeMonthlySheet(values);
+
+  assert.deepEqual(layout.prices, {
+    keyColumn: 5,
+    outputColumns: [6],
+    rows: [
+      { key: "DE.EUNL", row: 16 },
+      { key: "TVBETETF", row: 17 },
+      { key: "DE.SXR8", row: 18 },
+      { key: "AAPL", row: 19 },
+    ],
+  });
+  assert.deepEqual(layout.exchangeRates, {
+    keyColumn: 1,
+    outputColumns: [2],
+    rows: [
+      { key: "EUR", row: 16 },
+      { key: "USD", row: 17 },
+      { key: "HUF", row: 18 },
+    ],
+  });
+});
+
+test("SHEETS-005: rejects invalid and duplicate keys in positional market inputs", () => {
+  assert.ok(layoutModule, "the monthly sheet layout analyzer must be available");
+
+  const invalidValues: Values = Array.from({ length: 30 }, () => []);
+  invalidValues[15] = [null, 9, null, null, null, "AAPL"];
+  assert.throws(
+    () => layoutModule.analyzeMonthlySheet(invalidValues),
+    /exchange-rate key in row 16 must be non-empty text/,
+  );
+
+  const duplicateValues: Values = Array.from({ length: 30 }, () => []);
+  duplicateValues[15] = [null, "EUR", null, null, null, "AAPL"];
+  duplicateValues[16] = [null, "eur", null, null, null, "aapl"];
+  assert.throws(
+    () => layoutModule.analyzeMonthlySheet(duplicateValues),
+    /share-price table contains duplicate key "aapl"/,
+  );
+});
+
 test("SHEETS-005: rejects incomplete or repeated table headers instead of guessing", () => {
   assert.ok(layoutModule, "the monthly sheet layout analyzer must be available");
   assert.throws(
