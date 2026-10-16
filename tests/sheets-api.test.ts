@@ -152,7 +152,10 @@ test("SHEETS-006: explains how to refresh credentials after invalid_grant", asyn
     await assert.rejects(request, (error: unknown) => {
       assert.ok(error instanceof Error, `${operation} should reject with an Error`);
       assert.match(error.message, /Google Application Default Credentials.*invalid_grant/i);
-      assert.match(error.message, /gcloud auth application-default login/);
+      assert.match(
+        error.message,
+        /gcloud auth application-default login --scopes=https:\/\/www\.googleapis\.com\/auth\/spreadsheets/,
+      );
       assert.equal(error.cause, failure);
       return true;
     });
@@ -178,6 +181,10 @@ test("SHEETS-006: explains string invalid_grant rejections", async () => {
     (error: unknown) => {
       assert.ok(error instanceof Error);
       assert.match(error.message, /Google Application Default Credentials.*invalid_grant/i);
+      assert.match(
+        error.message,
+        /gcloud auth application-default login --scopes=https:\/\/www\.googleapis\.com\/auth\/spreadsheets/,
+      );
       assert.equal(error.cause, failure);
       return true;
     },

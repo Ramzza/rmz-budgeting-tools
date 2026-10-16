@@ -20,6 +20,32 @@ spreadsheet for the year being processed, or pass that year's sheet ID on the
 command line. Configure Google Application Default Credentials outside this
 repository; the CLI does not save credentials.
 
+### Google Sheets authentication (Windows/PowerShell)
+
+The CLI uses Application Default Credentials (ADC). `gcloud auth login` alone
+does not configure ADC for this application.
+
+1. If needed, [install the Google Cloud CLI](https://cloud.google.com/sdk/docs/install).
+2. Open PowerShell and run this command:
+
+   ```powershell
+   gcloud auth application-default login --scopes=https://www.googleapis.com/auth/spreadsheets
+   ```
+
+3. In the browser, sign in with a Google account that can access the target
+   spreadsheet and approve the request. The command stores ADC outside this
+   repository; do not copy credential files into the repository or commit them.
+4. Retry the monthly command, for example:
+
+   ```powershell
+   npm start -- 2026-09 --sheet-id SPREADSHEET_ID
+   ```
+
+If the CLI reports `invalid_grant`, run the login command again to refresh
+expired or revoked user credentials. If your setup uses service-account
+credentials instead, repair that ADC source rather than using the local-user
+login command.
+
 ## Monthly sheet convention
 
 Keep a separate spreadsheet for each year, with worksheet tabs named exactly

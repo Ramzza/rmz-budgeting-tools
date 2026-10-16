@@ -8,7 +8,8 @@ export interface ValueUpdate {
 }
 
 const INVALID_GRANT_MESSAGE =
-  "Google Application Default Credentials were rejected (invalid_grant). Reauthenticate them, then retry. For local user credentials, run `gcloud auth application-default login`.";
+  "Google Application Default Credentials were rejected (invalid_grant). Reauthenticate them, then retry. For local user credentials, run " +
+  "`gcloud auth application-default login --scopes=https://www.googleapis.com/auth/spreadsheets`.";
 
 async function runSheetsRequest<T>(request: () => Promise<T>): Promise<T> {
   try {
