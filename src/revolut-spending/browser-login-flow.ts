@@ -73,13 +73,8 @@ function roleControl(page: BrowserPage, name: RegExp): BrowserLocator {
 export function observeBrowserDisconnection(
   browser: BrowserSession,
   onDisconnect: () => void,
-): Promise<void> {
-  return new Promise<void>((resolve) => {
-    browser.once("disconnected", () => {
-      onDisconnect();
-      resolve();
-    });
-  });
+): void {
+  browser.once("disconnected", onDisconnect);
 }
 
 export function launchVisibleBrowser(
@@ -295,13 +290,6 @@ export async function saveCategoryBreakdown(
     () => writeFile(outputPath, html, "utf8"),
     progress,
   );
-}
-
-export function waitForBrowserToClose(
-  browserClosed: Promise<void>,
-  progress: BrowserProgressLogger,
-): Promise<void> {
-  return runBrowserStep("Wait for browser to close", () => browserClosed, progress);
 }
 
 export function closeBrowserIfOpen(

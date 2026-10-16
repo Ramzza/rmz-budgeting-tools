@@ -233,7 +233,7 @@ test("PRD-006: reports which browser step failed", async () => {
   assert.equal(calls.at(-1), "browser.close");
 });
 
-test("PRD-006: keeps Chromium open through category capture until the user closes it", async () => {
+test("PRD-006: closes Chromium after capture without waiting for manual close", async () => {
   await withTemporaryWorkingDirectory(async (directory) => {
     const now = new Date();
     const selection = {
@@ -247,21 +247,27 @@ test("PRD-006: keeps Chromium open through category capture until the user close
       monthLabelVisibleBeforeNavigation: true,
     });
     const progress: string[] = [];
-
-    let returned = false;
+    let resolveSaved: () => void = () => {};
+    const saved = new Promise<void>((resolve) => {
+      resolveSaved = resolve;
+    });
     const running = runBrowserLogin(
       automation,
-      (message) => progress.push(message),
+      (message) => {
+        progress.push(message);
+        if (message.startsWith("Completed: Save category breakdown")) resolveSaved();
+      },
       selection,
-    ).then(() => {
-      returned = true;
-    });
+    );
     await categoryCapture;
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
-    assert.equal(returned, false);
-    const callsBeforeBrowserClose = [...calls];
-    closeBrowser();
+    await saved;
+    const closedAutomatically = await Promise.race([
+      running.then(() => true),
+      new Promise<boolean>((resolve) => setImmediate(() => resolve(false))),
+    ]);
+    if (!closedAutomatically) closeBrowser();
     await running;
+    assert.equal(closedAutomatically, true, "browser-login should close Chromium after saving");
 
     const stepsBeforeMonthSelection = [
       "Launch visible Chromium",
@@ -304,7 +310,7 @@ test("PRD-006: keeps Chromium open through category capture until the user close
       "Validate category breakdown",
       "Create output directory",
       `Save category breakdown to output/spending-${selection.year}-09.html`,
-      "Wait for browser to close",
+      "Close browser",
     ];
     const expectedStartingSteps = [
       ...stepsBeforeMonthSelection,
@@ -329,8 +335,8 @@ test("PRD-006: keeps Chromium open through category capture until the user close
     assert.ok(progress.includes("Starting: Click Spent"));
     assert.ok(progress.includes("Completed: Click Spent"));
     assert.ok(calls.includes("page.getByText:Spent:true"));
-    assert.equal(callsBeforeBrowserClose[0], "chromium.launch:false");
-    assert.equal(callsBeforeBrowserClose.includes("browser.newPage:1860x1000"), true);
+    assert.equal(calls[0], "chromium.launch:false");
+    assert.equal(calls.includes("browser.newPage:1860x1000"), true);
     assert.deepEqual(clicks, [
       "/^log\\s*in$/i",
       "/reject/i",
@@ -340,7 +346,7 @@ test("PRD-006: keeps Chromium open through category capture until the user close
       "/^see all$/i:last",
     ]);
     assert.deepEqual(waitCalls, ["visible:0", `visible:${5 * 60 * 1000}`]);
-    assert.equal(calls.includes("browser.close"), false);
+    assert.equal(calls.includes("browser.close"), true);
 
     const outputPath = join(directory, "output", `spending-${selection.year}-09.html`);
     assert.deepEqual(await readdir(join(directory, "output")), [`spending-${selection.year}-09.html`]);
