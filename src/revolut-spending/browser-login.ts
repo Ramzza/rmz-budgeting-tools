@@ -14,7 +14,6 @@ import {
   rejectCookiesIfShown,
   saveCategoryBreakdown,
   selectAnalyticsMonth,
-  waitForBrowserToClose,
   waitForManualSignIn,
 } from "./browser-login-flow.js";
 import { parseAnalyticsMonth } from "./browser-login-month.js";
@@ -36,7 +35,7 @@ export async function runBrowserLogin(
   const browser = await launchVisibleBrowser(automation, progress);
   let browserDisconnected = false;
   try {
-    const browserClosed = observeBrowserDisconnection(browser, () => {
+    observeBrowserDisconnection(browser, () => {
       browserDisconnected = true;
     });
     const page = await createBrowserPage(browser, progress);
@@ -50,7 +49,6 @@ export async function runBrowserLogin(
     await clickSeeAll(page, progress);
     const categoryHtml = await captureCategoryBreakdown(page, progress);
     await saveCategoryBreakdown(categoryHtml, month, progress);
-    await waitForBrowserToClose(browserClosed, progress);
   } finally {
     await closeBrowserIfOpen(browser, browserDisconnected, progress);
   }
