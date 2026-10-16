@@ -7,6 +7,25 @@ export interface ValueUpdate {
   values: Values;
 }
 
+const INVALID_GRANT_MESSAGE =
+  "Google Application Default Credentials were rejected (invalid_grant). Reauthenticate them, then retry. For local user credentials, run `gcloud auth application-default login`.";
+
+async function runSheetsRequest<T>(request: () => Promise<T>): Promise<T> {
+  try {
+    return await request();
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+    if (/\binvalid_grant\b/i.test(message)) {
+      throw new Error(INVALID_GRANT_MESSAGE, { cause: error });
+    }
+    throw error;
+  }
+}
+
 export async function createSheetsClient(): Promise<sheets_v4.Sheets> {
   const { google } = await import("googleapis");
   const auth = new google.auth.GoogleAuth({
@@ -20,7 +39,9 @@ export async function getValues(
   spreadsheetId: string,
   range: string,
 ): Promise<Values> {
-  const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  const response = await runSheetsRequest(() =>
+    sheets.spreadsheets.values.get({ spreadsheetId, range }),
+  );
   return (response.data.values ?? []) as Values;
 }
 
@@ -30,12 +51,14 @@ export async function updateValues(
   range: string,
   values: Values,
 ): Promise<sheets_v4.Schema$UpdateValuesResponse> {
-  const response = await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values },
-  });
+  const response = await runSheetsRequest(() =>
+    sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values },
+    }),
+  );
   return response.data;
 }
 
@@ -45,13 +68,15 @@ export async function appendValues(
   range: string,
   values: Values,
 ): Promise<sheets_v4.Schema$AppendValuesResponse> {
-  const response = await sheets.spreadsheets.values.append({
-    spreadsheetId,
-    range,
-    valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: { values },
-  });
+  const response = await runSheetsRequest(() =>
+    sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values },
+    }),
+  );
   return response.data;
 }
 
@@ -60,12 +85,14 @@ export async function updateBatchValues(
   spreadsheetId: string,
   updates: readonly ValueUpdate[],
 ): Promise<sheets_v4.Schema$BatchUpdateValuesResponse> {
-  const response = await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId,
-    requestBody: {
-      valueInputOption: "USER_ENTERED",
-      data: updates.map(({ range, values }) => ({ range, values })),
-    },
-  });
+  const response = await runSheetsRequest(() =>
+    sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        valueInputOption: "USER_ENTERED",
+        data: updates.map(({ range, values }) => ({ range, values })),
+      },
+    }),
+  );
   return response.data;
 }
