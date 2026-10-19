@@ -4,10 +4,10 @@ import type { sheets_v4 } from "googleapis";
 import {
   appendValues,
   getValues,
+  updateBatchValues,
   updateValues,
   type Values,
 } from "../src/google-sheets/sheets.js";
-const sheetsModule = await import("../src/google-sheets/sheets.js");
 
 function createClient(returnedValues: Values | undefined): {
   client: sheets_v4.Sheets;
@@ -51,6 +51,22 @@ function createClient(returnedValues: Values | undefined): {
     },
   } as unknown as sheets_v4.Sheets;
   return { client, calls };
+}
+
+function createFailingClient(failure: unknown): sheets_v4.Sheets {
+  const fail = async (): Promise<never> => {
+    throw failure;
+  };
+  return {
+    spreadsheets: {
+      values: {
+        get: fail,
+        update: fail,
+        append: fail,
+        batchUpdate: fail,
+      },
+    },
+  } as unknown as sheets_v4.Sheets;
 }
 
 test("PRD-001: reads the requested spreadsheet range as cell values", async () => {
@@ -103,8 +119,6 @@ test("PRD-002: appends rows with USER_ENTERED and INSERT_ROWS", async () => {
 
 test("SHEETS-005: sends discovered cell ranges in one USER_ENTERED batch", async () => {
   const { client, calls } = createClient(undefined);
-  const updateBatchValues = Reflect.get(sheetsModule, "updateBatchValues");
-  assert.equal(typeof updateBatchValues, "function");
   const updates = [
     { range: "'2026-09'!B2", values: [[25]] },
     { range: "'2026-09'!F2", values: [[190.5]] },
@@ -119,4 +133,70 @@ test("SHEETS-005: sends discovered cell ranges in one USER_ENTERED batch", async
       requestBody: { valueInputOption: "USER_ENTERED", data: updates },
     },
   }]);
+});
+
+test("SHEETS-006: explains how to refresh credentials after invalid_grant", async () => {
+  const failure = new Error("invalid_grant");
+  const client = createFailingClient(failure);
+  const requests = [
+    ["read", () => getValues(client, "spreadsheet-1", "Sheet1!A1:B1")],
+    ["update", () => updateValues(client, "spreadsheet-1", "Sheet1!A1", [["Tea"]])],
+    ["append", () => appendValues(client, "spreadsheet-1", "Sheet1!A:B", [["Tea"]])],
+    [
+      "batch update",
+      () => updateBatchValues(client, "spreadsheet-1", [{ range: "Sheet1!A1", values: [["Tea"]] }]),
+    ],
+  ] as const;
+
+  for (const [operation, request] of requests) {
+    await assert.rejects(request, (error: unknown) => {
+      assert.ok(error instanceof Error, `${operation} should reject with an Error`);
+      assert.match(error.message, /Google Application Default Credentials.*invalid_grant/i);
+      assert.match(
+        error.message,
+        /gcloud auth application-default login --scopes=https:\/\/www\.googleapis\.com\/auth\/spreadsheets/,
+      );
+      assert.equal(error.cause, failure);
+      return true;
+    });
+  }
+});
+
+test("SHEETS-006: preserves unrelated Google Sheets errors", async () => {
+  const failure = new Error("permission denied");
+  const client = createFailingClient(failure);
+
+  await assert.rejects(
+    getValues(client, "spreadsheet-1", "Sheet1!A1:B1"),
+    (error: unknown) => error === failure,
+  );
+});
+
+test("SHEETS-006: explains string invalid_grant rejections", async () => {
+  const failure = "invalid_grant";
+  const client = createFailingClient(failure);
+
+  await assert.rejects(
+    getValues(client, "spreadsheet-1", "Sheet1!A1:B1"),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /Google Application Default Credentials.*invalid_grant/i);
+      assert.match(
+        error.message,
+        /gcloud auth application-default login --scopes=https:\/\/www\.googleapis\.com\/auth\/spreadsheets/,
+      );
+      assert.equal(error.cause, failure);
+      return true;
+    },
+  );
+});
+
+test("SHEETS-006: preserves unrelated non-Error Google Sheets failures", async () => {
+  const failure = { code: "transport_error" };
+  const client = createFailingClient(failure);
+
+  await assert.rejects(
+    getValues(client, "spreadsheet-1", "Sheet1!A1:B1"),
+    (error: unknown) => error === failure,
+  );
 });
