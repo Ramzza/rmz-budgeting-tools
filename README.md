@@ -29,7 +29,7 @@ does not configure ADC for this application.
 2. Open PowerShell and run this command:
 
    ```powershell
-   gcloud auth application-default login --scopes=https://www.googleapis.com/auth/spreadsheets
+   gcloud auth application-default login --scopes="https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets"
    ```
 
 3. In the browser, sign in with a Google account that can access the target
@@ -40,6 +40,20 @@ does not configure ADC for this application.
    ```powershell
    npm start -- 2026-09 --sheet-id SPREADSHEET_ID
    ```
+
+If Google blocks the default gcloud OAuth client with a “This app is blocked”
+message, use your own OAuth client. In the Google Cloud project, enable the
+Google Sheets API, configure the OAuth consent screen, add your account as a
+test user if the app is in testing mode, then create a Desktop app OAuth client
+ID and download its JSON file outside this repository. Replace the example
+path below with that downloaded file's path and run:
+
+```powershell
+gcloud auth application-default login --client-id-file="C:\path\to\client_secret.json" --scopes="https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets"
+```
+
+If a Google Workspace policy blocks the OAuth client, ask your administrator to
+allow it.
 
 If the CLI reports `invalid_grant`, run the login command again to refresh
 expired or revoked user credentials. If your setup uses service-account
